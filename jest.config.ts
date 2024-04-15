@@ -9,11 +9,13 @@ const config = {
   testMatch: ['<rootDir>/src/test/ts/*.(test).ts'],
   moduleNameMapper: {
     '@main/(.*)': '<rootDir>/src/main/ts/$1',
+    '^lodash-es$': 'lodash',
   },
   coverageDirectory: 'coverage',
   collectCoverageFrom: [
     'src/main/ts/**/*.ts',
     '!src/main/ts/**/*.d.ts',
   ],
+
 } satisfies Config
 export default config
