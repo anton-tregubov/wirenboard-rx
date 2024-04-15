@@ -8,15 +8,12 @@ const config = {
   },
   testMatch: ['<rootDir>/src/test/ts/*.(test).ts'],
   moduleNameMapper: {
-    '^@main$': '<rootDir>/src/main/ts',
-    '^@main/(.*)$': '<rootDir>/src/main/ts/$1',
+    '@main/(.*)': '<rootDir>/src/main/ts/$1',
   },
   coverageDirectory: 'coverage',
   collectCoverageFrom: [
-    'src/**/*.ts',
-    'src/**/*.mts',
-    '!src/**/*.d.ts',
-    '!src/**/*.d.mts',
+    'src/main/ts/**/*.ts',
+    '!src/main/ts/**/*.d.ts',
   ],
 } satisfies Config
 export default config

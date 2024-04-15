@@ -15,7 +15,6 @@
         "./src/main/ts/*"
       ]
     },
-    "outDir": "dist",
     "skipLibCheck": true,
     "allowImportingTsExtensions": false,
     "allowSyntheticDefaultImports": true,
@@ -33,6 +32,7 @@
     "strictNullChecks": true
   },
   "include": [
-    "src/main/ts"
+    "src/main/ts",
+    "src/test/ts"
   ]
 }

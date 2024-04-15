@@ -6,9 +6,16 @@
   "engines": {
     "node": ">= 16"
   },
+  "exports": {
+    ".": {
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.cjs.js"
+    }
+  },
   "devDependencies": {
     "@types/jest": "~29.5",
     "@types/node": "~16",
+    "@types/lodash-es": "4.17.12",
     "@typescript-eslint/eslint-plugin": "~7.6",
     "@typescript-eslint/parser": "~7.6",
     "eslint": "~8.56",
@@ -19,10 +26,15 @@
     "ts-node": "~10.1",
     "typescript": "~5.4"
   },
+  "dependencies": {
+    "mqtt": "5.5.0",
+    "rxjs": "7.8.1",
+    "lodash-es": "4.17.21"
+  },
   "scripts": {
     "clean": "rimraf coverage dist",
     "lint": "eslint ./src --ext .ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "test": "jest"
   },
   "author": "Anton Tregubov <tregubov@gmail.com>",
