@@ -21,7 +21,6 @@
     "alwaysStrict": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "sourceMap": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,

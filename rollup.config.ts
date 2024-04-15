@@ -6,7 +6,6 @@ import commonjs from '@rollup/plugin-commonjs'
 
 const bundle: RollupOptions[] = [
   {
-    // context: 'global',
     plugins: [nodeResolve(), commonjs(), typescript()],
     input: 'src/main/ts/index.ts',
     output: [

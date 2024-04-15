@@ -1,4 +1,3 @@
-import { connectAsync, MqttClient } from 'mqtt'
 import { Count, isDefine, Optional } from './utils'
 import { BehaviorSubject, EMPTY, groupBy, mergeMap, Observable, Observer, ReplaySubject, Subscription } from 'rxjs'
 import { lazyResource } from './lazy-resource'
@@ -7,41 +6,40 @@ import { pull } from 'lodash-es'
 export type TopicName = string
 export type TopicValueParser<T> = (value: string) => T
 export type TopicValueSerializer<T> = (value: T) => string
-export type LogEvent = string
 export type InfinityObserver<T> = Pick<Observer<T>, 'next'>['next']
 
-const UnprocessedErrorCodes = {
-  unexpected: (event: RawMqttEvent) => ({
+const ERROR_CODES = {
+  unexpected: (event: TopicValueEvent) => ({
     code: 1,
     event,
-    reason: 'Event from this topic not requested',
-  } as UnprocessedRawMqttEvent),
-  parseException: (event: RawMqttEvent, cause: unknown) => ({
+    reason: `Event from topic: ${event.topic} wasn't requested`,
+  } as UnprocessedTopicValueEvent),
+  parseException: (event: TopicValueEvent, cause: unknown) => ({
     code: 2,
     event,
     reason: `Can't parse value. Because ${cause}`,
-  } as UnprocessedRawMqttEvent),
+  } as UnprocessedTopicValueEvent),
   serializeException: (topic: TopicName, value: unknown, cause: unknown) => ({
     code: 4,
     event: { topic, value: '<undefined>' },
     reason: `Can't serialize value ${value}. Because ${cause}`,
-  } as UnprocessedRawMqttEvent),
+  } as UnprocessedTopicValueEvent),
 } as const
 
-export interface UnprocessedRawMqttEvent {
+export interface UnprocessedTopicValueEvent {
   readonly code: number;
   readonly reason: string;
-  readonly event: RawMqttEvent;
+  readonly event: TopicValueEvent;
 }
 
-export interface MqttRxJsBridgeOptions {
+export interface Options {
   readonly bufferSizeForProducer: Count
-  readonly notProcessingConsumerValue$: InfinityObserver<UnprocessedRawMqttEvent>
-  readonly notProcessingProviderValue$: InfinityObserver<UnprocessedRawMqttEvent>
-  readonly loggingEvent$: InfinityObserver<LogEvent>
+  readonly providerConcurrency: Count
+  readonly notProcessingConsumerValue$: InfinityObserver<UnprocessedTopicValueEvent>
+  readonly notProcessingProviderValue$: InfinityObserver<UnprocessedTopicValueEvent>
 }
 
-interface RawMqttEvent {
+export interface TopicValueEvent {
   readonly topic: TopicName;
   readonly value: string;
 }
@@ -66,53 +64,46 @@ export interface TopicProducer<Value> {
   readonly subscriber: Partial<Observer<Value>>
 }
 
-export class MqttRxJsBridge {
+export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
   private readonly _topicToSubject: Map<TopicName, SmartSubject<unknown>>
   private readonly _topicToObserver: Map<TopicName, SmartObserver<unknown>>
-  private readonly _publisher: ReplaySubject<RawMqttEvent>
+  private readonly _publisher: ReplaySubject<TopicValueEvent>
   private readonly _deferredTopicSubscription: TopicName[]
-  private readonly _options: MqttRxJsBridgeOptions
-  private _client: Optional<MqttClient>
   private _consumerSubscription: Optional<Subscription>
   private _producerSubscription: Optional<Subscription>
+  protected readonly options: Options
+  protected connection: Optional<Connection>
 
-  public constructor(private readonly _brokerHost: string, options: Partial<MqttRxJsBridgeOptions> = {}) {
+  protected constructor(options: Partial<Options> = {}) {
     this._topicToSubject = new Map()
     this._topicToObserver = new Map()
     this._deferredTopicSubscription = []
-    this._options = {
+    this.options = {
       bufferSizeForProducer: options.bufferSizeForProducer ?? 1000,
-      loggingEvent$: options.loggingEvent$ ?? (event => console.log(event)),
       notProcessingConsumerValue$: options.notProcessingConsumerValue$ ?? (event => console.error(`Error: ${event.code} [${event.event.topic}]:${event.event.value}. Reason: ${event.reason}`)),
-      notProcessingProviderValue$: options.notProcessingProviderValue$ ?? (event => console.error(`Error: ${event.code} [${event.event.topic}]:${event.event.value}. Reason: ${event.reason}
-            `)),
-    } satisfies MqttRxJsBridgeOptions
-    this._publisher = new ReplaySubject(this._options.bufferSizeForProducer)
+      notProcessingProviderValue$: options.notProcessingProviderValue$ ?? (event => console.error(`Error: ${event.code} [${event.event.topic}]:${event.event.value}. Reason: ${event.reason}`)),
+      providerConcurrency: options.providerConcurrency ?? 3,
+    } satisfies Options
+    this._publisher = new ReplaySubject(this.options.bufferSizeForProducer)
   }
 
+  protected abstract createConnection(): Promise<Connection>
+
+  protected abstract closeConnection(connection: Connection): Promise<void>
+
+  protected abstract createEventConsumer(connection: Connection): Promise<(event: TopicValueEvent) => Observable<void>>
+
+  protected abstract createEventProvider(connection: Connection): Promise<Observable<TopicValueEvent>>
+
+  protected abstract subscribeToTopic(connection: Connection, topic: TopicName): Promise<void>
+
+  protected abstract unsubscribeFromTopic(connection: Connection, topic: TopicName): Promise<void>
+
   public async start(): Promise<void> {
-    const client = await connectAsync(`mqtt://${this._brokerHost}`)
-    client.on('connect', () => {
-      this._options.loggingEvent$(`Connected to ${this._brokerHost}`)
-    })
-    client.on('disconnect', () => {
-      this._options.loggingEvent$(`Disconnected from ${this._brokerHost}`)
-    })
-    client.on('reconnect', () => {
-      this._options.loggingEvent$(`Reconnected to ${this._brokerHost}`)
-    })
-    client.on('error', (error) => {
-      this._options.loggingEvent$(`Error in ${error.name}: ${error.message}. \n${error.stack}`)
-    })
-    const rawMqttEventObservable$: Observable<RawMqttEvent> = new Observable(subscriber => {
-      this._options.loggingEvent$('Start listen messages')
-      client.on('message', (topic, payload) => subscriber.next({
-        topic,
-        value: payload.toString(),
-      } satisfies RawMqttEvent))
-      subscriber.remove(() => {client.off('message', () => this._options.loggingEvent$('Stop listen messages'))})
-    })
-    rawMqttEventObservable$.pipe(
+    const connection = this.connection = await this.createConnection()
+    const eventProvider$ = await this.createEventProvider(connection)
+    const eventConsumer$ = await this.createEventConsumer(connection)
+    this._consumerSubscription = eventProvider$.pipe(
       groupBy(event => event.topic),
       mergeMap(topics$ => {
           topics$.subscribe((event) => {
@@ -122,19 +113,25 @@ export class MqttRxJsBridge {
                 const parseValue = smartSubject.parser(event.value)
                 smartSubject.subject.next(parseValue)
               } catch (e) {
-                this._options.notProcessingConsumerValue$(UnprocessedErrorCodes.parseException(event, e))
+                this.options.notProcessingConsumerValue$(ERROR_CODES.parseException(event, e))
               }
             } else {
-              this._options.notProcessingConsumerValue$(UnprocessedErrorCodes.unexpected(event))
+              this.options.notProcessingConsumerValue$(ERROR_CODES.unexpected(event))
             }
           })
           return EMPTY
         },
       ),
-    )
-    this._client = client
-    this._consumerSubscription = rawMqttEventObservable$.subscribe()
-    this._producerSubscription = this._publisher.subscribe(event => client.publish(event.topic, event.value))
+    ).subscribe()
+    this._producerSubscription = this._publisher
+      .pipe(
+        groupBy(event => event.topic),
+        mergeMap(topics$ =>
+          topics$.pipe(
+            mergeMap(event => eventConsumer$(event), 1/*only one parallel event for topic*/),
+          ), this.options.providerConcurrency),
+      )
+      .subscribe()
     while (this._deferredTopicSubscription.length) {
       this.startSubscription(this._deferredTopicSubscription.pop()!)
     }
@@ -171,7 +168,7 @@ export class MqttRxJsBridge {
           const stringValue = serializer(value)
           this._publisher.next({ topic: topicName, value: stringValue })
         } catch (e) {
-          this._options.notProcessingConsumerValue$(UnprocessedErrorCodes.serializeException(topicName, value, e))
+          this.options.notProcessingConsumerValue$(ERROR_CODES.serializeException(topicName, value, e))
         }
       }
       smartObserver = {
@@ -188,9 +185,17 @@ export class MqttRxJsBridge {
     }
   }
 
+  public async stop(): Promise<void> {
+    this._producerSubscription?.unsubscribe()
+    this._consumerSubscription?.unsubscribe()
+    if (isDefine(this.connection))
+      await this.closeConnection(this.connection)
+    this.connection = undefined
+  }
+
   private startSubscription(topicName: string) {
-    if (isDefine(this._client)) {
-      this._client.subscribeAsync(topicName).then(() => console.log(`Start subscription to ${topicName}`))
+    if (isDefine(this.connection)) {
+      this.subscribeToTopic(this.connection, topicName).finally(/*ignore? where should w8 result?*/)
     } else {
       this._deferredTopicSubscription.push(topicName)
     }
@@ -198,16 +203,10 @@ export class MqttRxJsBridge {
   }
 
   private stopSubscription(topicName: string) {
-    if (isDefine(this._client)) {
-      this._client.unsubscribeAsync(topicName).then(() => console.log(`Stop subscription to ${topicName}`))
+    if (isDefine(this.connection)) {
+      this.unsubscribeFromTopic(this.connection, topicName).finally(/*ignore? where should w8 result?*/)
     } else {
       pull(this._deferredTopicSubscription, topicName)
     }
-  }
-
-  public async stop(): Promise<void> {
-    this._producerSubscription?.unsubscribe()
-    this._consumerSubscription?.unsubscribe()
-    return this._client?.endAsync()
   }
 }
