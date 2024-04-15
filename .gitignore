@@ -1,0 +1,9 @@
+.idea/
+*.iml
+buildcache/
+node_modules/
+coverage/
+dist/
+dist-declarations/
+*.tgz
+*.log

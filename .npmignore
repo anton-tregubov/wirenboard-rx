@@ -1,0 +1,5 @@
+*
+!dist/**/*
+!dist-declarations/**/*
+!package.json
+!README.md 

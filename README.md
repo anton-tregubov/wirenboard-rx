@@ -1,2 +1,3 @@
 # wirenboard-rx
-Yet another rule engine aproach for Wirenboard controller
+
+Yet another rule engine approach for Wirenboard controller

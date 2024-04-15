@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2020",
+    "lib": [
+      "ES2022"
+    ],
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "rootDirs": [
+      "./src/main/ts"
+    ],
+    "paths": {
+      "@main/*": [
+        "./src/main/ts/*"
+      ]
+    },
+    "outDir": "dist",
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": false,
+    "allowSyntheticDefaultImports": true,
+    "alwaysStrict": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "sourceMap": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitAny": true,
+    "noImplicitThis": false,
+    "strictNullChecks": true
+  },
+  "include": [
+    "src/main/ts"
+  ]
+}

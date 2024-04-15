@@ -1,0 +1,5 @@
+*.ts text eol=lf
+*.md text eol=lf
+.gitignore text eol=lf
+.npmignore text eol=lf
+.gitattributes text eol=lf
