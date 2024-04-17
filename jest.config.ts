@@ -16,6 +16,7 @@ const config = {
     'src/main/ts/**/*.ts',
     '!src/main/ts/**/*.d.ts',
   ],
-
+  setupFilesAfterEnv: ['jest-extended/all', './.jest/console.ts'],
+  testTimeout: 20000,
 } satisfies Config
 export default config

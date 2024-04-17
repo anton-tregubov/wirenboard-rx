@@ -50,15 +50,16 @@ export class InMemoryReactiveSwitch extends TopicBaseEventStreamReactiveSwitch<n
     this.log(`Close connection`)
   }
 
-  protected async createEventConsumer(_: never): Promise<(event: TopicValueEvent) => Observable<void>> {
+  protected async createEventConsumer(): Promise<(event: TopicValueEvent) => Observable<void>> {
     return event => {
       this.log(`>> [${event.topic}]: ${event.value}. Sending...`)
       this._consumedEvents.push(event)
       if (this.consumerProcessingDelay) {
-        return timer(this.consumerProcessingDelay).pipe(
-          map(() => {}),
-          tap(() => this.log(`>> [${event.topic}]: ${event.value}. Send`)),
-        )
+        return timer(this.consumerProcessingDelay)
+          .pipe(
+            map(() => {}),
+            tap(() => this.log(`>> [${event.topic}]: ${event.value}. Send`)),
+          )
       } else {
         this.log(`>> [${event.topic}]: ${event.value}. Send`)
         return EMPTY
@@ -66,7 +67,7 @@ export class InMemoryReactiveSwitch extends TopicBaseEventStreamReactiveSwitch<n
     }
   }
 
-  protected async createEventProvider(_: never): Promise<Observable<TopicValueEvent>> {
+  protected async createEventProvider(): Promise<Observable<TopicValueEvent>> {
     return this._eventProducer.asObservable()
       .pipe(tap((event) => this.log(`<< [${event.topic}]: ${event.value}. Receive`)))
   }
@@ -86,5 +87,4 @@ export class InMemoryReactiveSwitch extends TopicBaseEventStreamReactiveSwitch<n
     this.log(`--[${topic}]. Unsubscribe`)
     this._topics.delete(topic)
   }
-
 }

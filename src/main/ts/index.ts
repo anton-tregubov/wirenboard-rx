@@ -10,4 +10,5 @@ export type {
   TopicConsumer,
   TopicProducer,
   UnprocessedTopicValueEvent,
+  TopicValueEvent,
 } from '@main/core/topic-base-event-stream-reactive-switch'

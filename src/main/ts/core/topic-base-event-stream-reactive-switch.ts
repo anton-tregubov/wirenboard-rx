@@ -1,7 +1,20 @@
 import { Count, isDefine, Optional } from './utils'
-import { BehaviorSubject, EMPTY, groupBy, mergeMap, Observable, Observer, ReplaySubject, Subscription } from 'rxjs'
+import {
+  BehaviorSubject,
+  concatMap,
+  EMPTY,
+  groupBy,
+  map,
+  mergeMap,
+  Observable,
+  Observer,
+  ReplaySubject,
+  Subscription,
+  tap,
+} from 'rxjs'
 import { lazyResource } from './lazy-resource'
 import { pull } from 'lodash-es'
+import { WaitableQueue } from '@main/core/waitable-queue'
 
 export type TopicName = string
 export type TopicValueParser<T> = (value: string) => T
@@ -67,8 +80,9 @@ export interface TopicProducer<Value> {
 export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
   private readonly _topicToSubject: Map<TopicName, SmartSubject<unknown>>
   private readonly _topicToObserver: Map<TopicName, SmartObserver<unknown>>
-  private readonly _publisher: ReplaySubject<TopicValueEvent>
   private readonly _deferredTopicSubscription: TopicName[]
+  private readonly _publisher: ReplaySubject<TopicValueEvent>
+  private readonly _providerQueue: WaitableQueue<TopicValueEvent>
   private _consumerSubscription: Optional<Subscription>
   private _producerSubscription: Optional<Subscription>
   protected readonly options: Options
@@ -84,6 +98,7 @@ export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
       notProcessingProviderValue$: options.notProcessingProviderValue$ ?? (event => console.error(`Error: ${event.code} [${event.event.topic}]:${event.event.value}. Reason: ${event.reason}`)),
       providerConcurrency: options.providerConcurrency ?? 3,
     } satisfies Options
+    this._providerQueue = new WaitableQueue()
     this._publisher = new ReplaySubject(this.options.bufferSizeForProducer)
   }
 
@@ -125,13 +140,18 @@ export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
     ).subscribe()
     this._producerSubscription = this._publisher
       .pipe(
+        tap(event => this._providerQueue.add(event)),
         groupBy(event => event.topic),
-        mergeMap(topics$ =>
-          topics$.pipe(
-            mergeMap(event => eventConsumer$(event), 1/*only one parallel event for topic*/),
-          ), this.options.providerConcurrency),
-      )
-      .subscribe()
+        mergeMap(topics$ => {
+          return topics$.pipe(
+            concatMap(event => eventConsumer$(event)
+              .pipe(
+                map(() => event),
+              )),
+          )
+        }, this.options.providerConcurrency),
+        tap(event => this._providerQueue.remove(event)),
+      ).subscribe()
     while (this._deferredTopicSubscription.length) {
       this.startSubscription(this._deferredTopicSubscription.pop()!)
     }
@@ -175,7 +195,7 @@ export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
         observer,
         serializer,
       }
-      this._topicToObserver.set(topicName, smartObserver)
+      this._topicToObserver.set(topicName, smartObserver as SmartObserver<unknown>)
     }
 
     return {
@@ -186,6 +206,7 @@ export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
   }
 
   public async stop(): Promise<void> {
+    await this._providerQueue.waitEmpty()
     this._producerSubscription?.unsubscribe()
     this._consumerSubscription?.unsubscribe()
     if (isDefine(this.connection))
@@ -210,3 +231,25 @@ export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
     }
   }
 }
+
+// function createLog<T>(prefix: string, from: number): MonoTypeOperatorFunction<T> {
+//   return tap({
+//     next: value => console.log(`[${new Date().getTime() - from}].${prefix}.VALUE`, value),
+//     error: err => console.log(`[${new Date().getTime() - from}].${prefix}.ERROR`, err),
+//     complete: () => console.log(`[${new Date().getTime() - from}].${prefix}.COMPLETE`),
+//     subscribe: () => console.log(`[${new Date().getTime() - from}].${prefix}.SUBSCRIBE`),
+//     unsubscribe: () => console.log(`[${new Date().getTime() - from}].${prefix}.UNSUBSCRIBE`),
+//     finalize: () => console.log(`[${new Date().getTime() - from}].${prefix}.FINALIZE`),
+//   })
+// }
+//
+// function createObs(prefix: string, from: number, done: () => void): Observer<any> {
+//   return {
+//     next: value => console.log(`[${new Date().getTime() - from}].${prefix}.VALUE`, value),
+//     error: err => console.log(`[${new Date().getTime() - from}].${prefix}.ERROR`, err),
+//     complete: () => {
+//       console.log(`[${new Date().getTime() - from}].${prefix}.COMPLETE`)
+//       done()
+//     },
+//   }
+// }

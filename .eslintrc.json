@@ -12,11 +12,13 @@
   },
   "plugins": [
     "@typescript-eslint",
-    "jest"
+    "jest",
+    "jest-extended"
   ],
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
-    "plugin:jest/recommended"
+    "plugin:jest/recommended",
+    "plugin:jest-extended/all"
   ]
 }

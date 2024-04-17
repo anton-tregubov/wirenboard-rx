@@ -18,6 +18,7 @@
     "skipLibCheck": true,
     "allowImportingTsExtensions": false,
     "allowSyntheticDefaultImports": true,
+    "strict": true,
     "alwaysStrict": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -35,4 +36,5 @@
     "src/test/ts",
     "rollup.config.ts"
   ]
+  //  "files": ["global.d.ts"]
 }
