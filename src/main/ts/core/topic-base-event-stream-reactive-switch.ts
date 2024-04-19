@@ -9,12 +9,13 @@ import {
   Observable,
   Observer,
   ReplaySubject,
+  Subject,
   Subscription,
   tap,
 } from 'rxjs'
-import { lazyResource } from './lazy-resource'
 import { pull } from 'lodash-es'
 import { WaitableQueue } from '@main/core/waitable-queue'
+import { lazyResource } from '@main/core/lazy-resource'
 
 export type TopicName = string
 export type TopicValueParser<T> = (value: string) => T
@@ -57,10 +58,19 @@ export interface TopicValueEvent {
   readonly value: string;
 }
 
-interface SmartSubject<Value> {
-  readonly subject: BehaviorSubject<Value>;
+type SmartSubject<Value> = ColdSmartSubject<Value> | HotSmartSubject<Value>
+
+interface CommonSmartSubject<Value> {
   readonly observable: Observable<Value>;
   readonly parser: TopicValueParser<Value>;
+}
+
+interface ColdSmartSubject<Value> extends CommonSmartSubject<Value> {
+  readonly subject: Subject<Value>;
+}
+
+interface HotSmartSubject<Value> extends CommonSmartSubject<Value> {
+  readonly subject: BehaviorSubject<Value>;
 }
 
 interface SmartObserver<Value> {
@@ -68,9 +78,13 @@ interface SmartObserver<Value> {
   readonly serializer: TopicValueSerializer<Value>;
 }
 
-export interface TopicConsumer<Value> {
+export interface HotTopicConsumer<Value> {
   readonly changes$: Observable<Value>
   readonly currentValue: Value
+}
+
+export interface ColdTopicConsumer<Value> {
+  readonly changes$: Observable<Value>
 }
 
 export interface TopicProducer<Value> {
@@ -157,20 +171,53 @@ export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
     }
   }
 
-  public createTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>, initialValue: Value): TopicConsumer<Value> {
-    let smartSubject = this._topicToSubject.get(topicName) as Optional<SmartSubject<Value>>
+  private isHotSmartSubject<Value>(sub: SmartSubject<Value>): sub is HotSmartSubject<Value> {
+    return sub.subject instanceof BehaviorSubject
+  }
+
+  private isColdSmartSubject<Value>(sub: SmartSubject<Value>): sub is ColdSmartSubject<Value> {
+    return !this.isHotSmartSubject(sub)
+  }
+
+  public createColdTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>): ColdTopicConsumer<Value> {
+    let smartSubject = this._topicToSubject.get(topicName) as Optional<ColdSmartSubject<Value>>
+    if (!isDefine(smartSubject)) {
+      const subject = new Subject<Value>()
+      smartSubject = {
+        subject: subject,
+        observable: lazyResource(
+          () => subject,
+          () => this._topicToSubject.get(topicName)?.subject === subject && this.startSubscription(topicName),
+          () => this._topicToSubject.get(topicName)?.subject === subject && this.stopSubscription(topicName),
+        ),
+        parser,
+      } satisfies ColdSmartSubject<Value>
+      this._topicToSubject.set(topicName, smartSubject as ColdSmartSubject<unknown>)
+    }
+    if (!this.isColdSmartSubject(smartSubject)) {
+      throw new Error(`Try to subscribe to the topic ${topicName} that already have another type of subscription`)
+    }
+    return {
+      changes$: smartSubject.observable,
+    }
+  }
+
+  public createHotTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>, initialValue: Value): HotTopicConsumer<Value> {
+    let smartSubject = this._topicToSubject.get(topicName) as Optional<HotSmartSubject<Value>>
     if (!isDefine(smartSubject)) {
       const behaviorSubject = new BehaviorSubject<Value>(initialValue)
       smartSubject = {
         subject: behaviorSubject,
-        observable: lazyResource(
-          () => behaviorSubject,
-          () => this.startSubscription(topicName),
-          () => this.stopSubscription(topicName),
-        ),
+        observable: behaviorSubject.asObservable(),
         parser,
-      } as SmartSubject<Value>
-      this._topicToSubject.set(topicName, smartSubject as SmartSubject<unknown>)
+      } as HotSmartSubject<Value>
+      this.startSubscription(topicName)
+      behaviorSubject.subscribe().add(() => this.stopSubscription(topicName))
+      this._topicToSubject.set(topicName, smartSubject as HotSmartSubject<unknown>)
+    } else {
+      if (!this.isHotSmartSubject(smartSubject)) {
+        throw new Error(`Try to subscribe to the topic ${topicName} that already have another type of subscription`)
+      }
     }
     return {
       changes$: smartSubject.observable,

@@ -7,8 +7,9 @@ export type {
   InfinityObserver,
   TopicName,
   TopicValueParser,
-  TopicConsumer,
   TopicProducer,
+  ColdTopicConsumer,
+  HotTopicConsumer,
   UnprocessedTopicValueEvent,
   TopicValueEvent,
 } from '@main/core/topic-base-event-stream-reactive-switch'

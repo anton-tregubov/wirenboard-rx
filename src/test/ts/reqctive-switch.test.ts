@@ -15,28 +15,65 @@ describe('reactive switch', () => {
     await rw.start()
   })
 
-  it('just work', async () => {
-    const device1 = rw.createTopicConsumer('Topic in 1', value => parseInt(value), 0)
-    const device2 = rw.createTopicConsumer('Topic in 2', value => parseInt(value), 0)
-    const producer = rw.createTopicProducer<number>('Topic out', value => value.toString())
-    const subscription = combineLatest([device1.changes$, device2.changes$])
+  it('e2e cold subscription', async () => {
+    const topicIn1 = rw.createColdTopicConsumer('Topic in 1', value => parseInt(value))
+    const topicIn2 = rw.createColdTopicConsumer('Topic in 2', value => parseInt(value))
+    const topicOut = rw.createTopicProducer<number>('Topic out', value => value.toString())
+    const subscription = combineLatest([topicIn1.changes$, topicIn2.changes$])
       .pipe(
         map(([d1, d2]) => d1 + d2),
       )
-      .subscribe(producer.subscriber)
+      .subscribe(topicOut.subscriber)
 
     rw.event('Topic in 2', '1')
     rw.event('Topic in 2', '2')
     rw.event('Topic in 1', '1')
 
     await rw.stop()
+
     expect(rw.subscribedTopics).toContainValues(['Topic in 1', 'Topic in 2'])
     expect(rw.consumedEvents).toContainAllValues([
-      { topic: 'Topic out', value: '0' },
-      { topic: 'Topic out', value: '1' },
-      { topic: 'Topic out', value: '2' },
       { topic: 'Topic out', value: '3' },
     ] satisfies TopicValueEvent[])
+
     subscription.unsubscribe()
+    expect(rw.subscribedTopics).toBe([])
+  })
+
+  it('e2e hot subscription', async () => {
+    const topicIn1 = rw.createHotTopicConsumer('Topic in 1', value => parseInt(value), -1)
+    const topicIn2 = rw.createHotTopicConsumer('Topic in 2', value => parseInt(value), -1)
+    const topicOut = rw.createTopicProducer<number>('Topic out', value => value.toString())
+    const subscription = combineLatest([topicIn1.changes$, topicIn2.changes$])
+      .pipe(
+        map(([d1, d2]) => d1 + d2),
+      )
+      .subscribe(topicOut.subscriber)
+
+    expect(topicIn1.currentValue).toBe(-1)
+    expect(topicIn2.currentValue).toBe(-1)
+
+    rw.event('Topic in 2', '1')
+    rw.event('Topic in 2', '2')
+
+    expect(topicIn1.currentValue).toBe(-1)
+    expect(topicIn2.currentValue).toBe(2)
+
+    rw.event('Topic in 1', '1')
+
+    expect(topicIn1.currentValue).toBe(1)
+    expect(topicIn2.currentValue).toBe(2)
+
+    await rw.stop()
+    expect(rw.subscribedTopics).toContainValues(['Topic in 1', 'Topic in 2'])
+    expect(rw.consumedEvents).toContainAllValues([
+      { topic: 'Topic out', value: '-2' },
+      { topic: 'Topic out', value: '0' },
+      { topic: 'Topic out', value: '1' },
+      { topic: 'Topic out', value: '3' },
+    ] satisfies TopicValueEvent[])
+
+    subscription.unsubscribe()
+    expect(rw.subscribedTopics).toContainValues(['Topic in 1', 'Topic in 2'])
   })
 })
