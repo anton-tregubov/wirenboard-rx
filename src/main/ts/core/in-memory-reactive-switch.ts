@@ -8,7 +8,6 @@ import {
 import { Duration } from '@main/core/utils'
 
 export class InMemoryReactiveSwitch extends TopicBaseEventStreamReactiveSwitch<never> {
-  private readonly _topics: Set<TopicName>
   private readonly _consumedEvents: TopicValueEvent[]
   private readonly _eventProducer: Subject<TopicValueEvent>
   public consumerProcessingDelay: Duration
@@ -16,7 +15,6 @@ export class InMemoryReactiveSwitch extends TopicBaseEventStreamReactiveSwitch<n
 
   public constructor(options: Partial<Options> = {}) {
     super(options)
-    this._topics = new Set()
     this._consumedEvents = []
     this.consumerProcessingDelay = 0
     this.debug = false
@@ -30,7 +28,7 @@ export class InMemoryReactiveSwitch extends TopicBaseEventStreamReactiveSwitch<n
   }
 
   public get subscribedTopics(): TopicName[] {
-    return [...this._topics]
+    return super.subscribedTopics
   }
 
   public get consumedEvents(): TopicValueEvent[] {
@@ -73,27 +71,14 @@ export class InMemoryReactiveSwitch extends TopicBaseEventStreamReactiveSwitch<n
   }
 
   protected async subscribeToTopic(_: never, topic: TopicName): Promise<void> {
-    if (this._topics.has(topic)) {
-      throw new Error(`Topic ${topic} already listen`)
-    }
     this.log(`++[${topic}]. Subscribe`)
-    this._topics.add(topic)
   }
 
   protected async unsubscribeFromTopic(_: never, topic: TopicName): Promise<void> {
-    if (!this._topics.has(topic)) {
-      throw new Error(`Topic ${topic} wasn't listen`)
-    }
     this.log(`--[${topic}]. Unsubscribe`)
-    this._topics.delete(topic)
   }
 
   public async waitPendingEvents(): Promise<void> {
     await super.waitPendingEvents()
-  }
-
-  public async stop(): Promise<void> {
-    await super.stop();
-    [...this._topics].forEach(topicName => this.unsubscribeFromTopic(undefined as never, topicName))
   }
 }

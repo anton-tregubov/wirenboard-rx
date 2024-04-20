@@ -13,7 +13,7 @@ import {
   Subscription,
   tap,
 } from 'rxjs'
-import { pull } from 'lodash-es'
+import { difference, pull } from 'lodash-es'
 import { WaitableQueue } from '@main/core/waitable-queue'
 import { lazyResource } from '@main/core/lazy-resource'
 
@@ -97,6 +97,7 @@ export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
   private readonly _deferredTopicSubscription: TopicName[]
   private readonly _publisher: ReplaySubject<TopicValueEvent>
   private readonly _providerQueue: WaitableQueue<TopicValueEvent>
+  private readonly _subscribedTopics: Set<TopicName>
   private _consumerSubscription: Optional<Subscription>
   private _producerSubscription: Optional<Subscription>
   protected readonly options: Options
@@ -105,6 +106,7 @@ export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
   protected constructor(options: Partial<Options> = {}) {
     this._topicToSubject = new Map()
     this._topicToObserver = new Map()
+    this._subscribedTopics = new Set()
     this._deferredTopicSubscription = []
     this.options = {
       bufferSizeForProducer: options.bufferSizeForProducer ?? 1000,
@@ -182,6 +184,7 @@ export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
   public createColdTopicConsumer(topicName: TopicName): ColdTopicConsumer<string>
   public createColdTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>): ColdTopicConsumer<Value>
   createColdTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value> = value => value as Value): ColdTopicConsumer<Value> {
+    this.assertPrefixTopicName(topicName)
     let smartSubject = this._topicToSubject.get(topicName) as Optional<ColdSmartSubject<Value>>
     if (!isDefine(smartSubject)) {
       const subject = new Subject<Value>()
@@ -208,6 +211,7 @@ export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
   public createHotTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>): HotTopicConsumer<Optional<Value>>
   public createHotTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>, initialValue: Value): HotTopicConsumer<Value>
   createHotTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value> = (value) => value as Value, initialValue: Value = undefined as Value): HotTopicConsumer<Value> {
+    this.assertPrefixTopicName(topicName)
     let smartSubject = this._topicToSubject.get(topicName) as Optional<HotSmartSubject<Value>>
     if (!isDefine(smartSubject)) {
       const behaviorSubject = new BehaviorSubject<Value>(initialValue)
@@ -232,7 +236,14 @@ export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
     }
   }
 
+  private assertPrefixTopicName(topicName: string) {
+    if (topicName.endsWith('#')) {
+      throw new Error('Not implemented not direct topic subscription')
+    }
+  }
+
   public createTopicProducer<Value>(topicName: TopicName, serializer: TopicValueSerializer<Value>): TopicProducer<Value> {
+    this.assertPrefixTopicName(topicName)
     let smartObserver = this._topicToObserver.get(topicName) as Optional<SmartObserver<Value>>
     if (!isDefine(smartObserver)) {
       const observer: InfinityObserver<Value> = value => {
@@ -261,18 +272,35 @@ export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
     await this._providerQueue.waitEmpty()
   }
 
+  protected get subscribedTopics(): TopicName[] {
+    return [...this._subscribedTopics]
+  }
+
   public async stop(): Promise<void> {
     await this.waitPendingEvents()
     this._producerSubscription?.unsubscribe()
     this._consumerSubscription?.unsubscribe()
-    if (isDefine(this.connection))
+    this.passivateActiveSubscriptions()
+    if (isDefine(this.connection)) {
       await this.closeConnection(this.connection)
+    }
     this.connection = undefined
+  }
+
+  private passivateActiveSubscriptions() {
+    const topicToSave = difference([...this._subscribedTopics], this._deferredTopicSubscription)
+    topicToSave.forEach(topic => this.stopSubscription(topic))
+    this._deferredTopicSubscription.push(...topicToSave)
+    this._subscribedTopics.clear()
   }
 
   private startSubscription(topicName: string) {
     if (isDefine(this.connection)) {
+      if (this._subscribedTopics.has(topicName)) {
+        throw new Error(`Topic ${topicName} already listen`)
+      }
       this.subscribeToTopic(this.connection, topicName).finally(/*ignore? where should w8 result?*/)
+      this._subscribedTopics.add(topicName)
     } else {
       this._deferredTopicSubscription.push(topicName)
     }
@@ -281,7 +309,11 @@ export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
 
   private stopSubscription(topicName: string) {
     if (isDefine(this.connection)) {
+      if (!this._subscribedTopics.has(topicName)) {
+        throw new Error(`Topic ${topicName} not yet listen`)
+      }
       this.unsubscribeFromTopic(this.connection, topicName).finally(/*ignore? where should w8 result?*/)
+      this._subscribedTopics.delete(topicName)
     } else {
       pull(this._deferredTopicSubscription, topicName)
     }

@@ -81,4 +81,33 @@ describe('reactive switch', () => {
     subscription.unsubscribe()
     expect(rw.subscribedTopics).toContainValues(['Topic in 1', 'Topic in 2'])
   })
+
+  it('restart', async () => {
+    const hot = rw.createHotTopicConsumer('Hot', value => parseInt(value), -1)
+    const cold = rw.createColdTopicConsumer('Cold', value => parseInt(value))
+    const topicOut = rw.createTopicProducer<number>('Out', value => value.toString())
+
+    expect(rw.subscribedTopics).toStrictEqual(['Hot'])
+    await rw.stop()
+    expect(rw.subscribedTopics).toStrictEqual([])
+
+    await rw.start()
+    expect(rw.subscribedTopics).toStrictEqual(['Hot'])
+
+    combineLatest([hot.changes$, cold.changes$]).pipe(map(([d1, d2]) => d1 + d2)).subscribe(topicOut.subscriber)
+
+    rw.event('Hot', '1')
+    rw.event('Cold', '2')
+
+    await rw.waitPendingEvents()
+
+    expect(rw.subscribedTopics).toContainValues(['Hot', 'Cold'])
+
+    expect(rw.consumedEvents).toContainAllValues([
+      { topic: 'Out', value: '3' },
+    ] satisfies TopicValueEvent[])
+
+  })
+
+  //todo add support for /# subscription. trie-search
 })
