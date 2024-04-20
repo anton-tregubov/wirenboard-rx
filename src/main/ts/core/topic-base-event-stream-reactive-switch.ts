@@ -179,7 +179,9 @@ export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
     return !this.isHotSmartSubject(sub)
   }
 
-  public createColdTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>): ColdTopicConsumer<Value> {
+  public createColdTopicConsumer(topicName: TopicName): ColdTopicConsumer<string>
+  public createColdTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>): ColdTopicConsumer<Value>
+  createColdTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value> = value => value as Value): ColdTopicConsumer<Value> {
     let smartSubject = this._topicToSubject.get(topicName) as Optional<ColdSmartSubject<Value>>
     if (!isDefine(smartSubject)) {
       const subject = new Subject<Value>()
@@ -202,7 +204,10 @@ export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
     }
   }
 
-  public createHotTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>, initialValue: Value): HotTopicConsumer<Value> {
+  public createHotTopicConsumer(topicName: TopicName): HotTopicConsumer<Optional<string>>
+  public createHotTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>): HotTopicConsumer<Optional<Value>>
+  public createHotTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>, initialValue: Value): HotTopicConsumer<Value>
+  createHotTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value> = (value) => value as Value, initialValue: Value = undefined as Value): HotTopicConsumer<Value> {
     let smartSubject = this._topicToSubject.get(topicName) as Optional<HotSmartSubject<Value>>
     if (!isDefine(smartSubject)) {
       const behaviorSubject = new BehaviorSubject<Value>(initialValue)
