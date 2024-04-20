@@ -87,4 +87,13 @@ export class InMemoryReactiveSwitch extends TopicBaseEventStreamReactiveSwitch<n
     this.log(`--[${topic}]. Unsubscribe`)
     this._topics.delete(topic)
   }
+
+  public async waitPendingEvents(): Promise<void> {
+    await super.waitPendingEvents()
+  }
+
+  public async stop(): Promise<void> {
+    await super.stop();
+    [...this._topics].forEach(topicName => this.unsubscribeFromTopic(undefined as never, topicName))
+  }
 }

@@ -15,6 +15,10 @@ describe('reactive switch', () => {
     await rw.start()
   })
 
+  afterEach(async () => {
+    await rw.stop()
+  })
+
   it('e2e cold subscription', async () => {
     const topicIn1 = rw.createColdTopicConsumer('Topic in 1', value => parseInt(value))
     const topicIn2 = rw.createColdTopicConsumer('Topic in 2', value => parseInt(value))
@@ -29,7 +33,7 @@ describe('reactive switch', () => {
     rw.event('Topic in 2', '2')
     rw.event('Topic in 1', '1')
 
-    await rw.stop()
+    await rw.waitPendingEvents()
 
     expect(rw.subscribedTopics).toContainValues(['Topic in 1', 'Topic in 2'])
     expect(rw.consumedEvents).toContainAllValues([
@@ -37,7 +41,7 @@ describe('reactive switch', () => {
     ] satisfies TopicValueEvent[])
 
     subscription.unsubscribe()
-    expect(rw.subscribedTopics).toBe([])
+    expect(rw.subscribedTopics).toStrictEqual([])
   })
 
   it('e2e hot subscription', async () => {
@@ -64,7 +68,8 @@ describe('reactive switch', () => {
     expect(topicIn1.currentValue).toBe(1)
     expect(topicIn2.currentValue).toBe(2)
 
-    await rw.stop()
+    await rw.waitPendingEvents()
+
     expect(rw.subscribedTopics).toContainValues(['Topic in 1', 'Topic in 2'])
     expect(rw.consumedEvents).toContainAllValues([
       { topic: 'Topic out', value: '-2' },

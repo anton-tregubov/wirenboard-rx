@@ -257,8 +257,12 @@ export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
     }
   }
 
-  public async stop(): Promise<void> {
+  protected async waitPendingEvents(): Promise<void> {
     await this._providerQueue.waitEmpty()
+  }
+
+  public async stop(): Promise<void> {
+    await this.waitPendingEvents()
     this._producerSubscription?.unsubscribe()
     this._consumerSubscription?.unsubscribe()
     if (isDefine(this.connection))

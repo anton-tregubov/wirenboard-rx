@@ -72,4 +72,9 @@ export class MqttReactiveSwitch extends TopicBaseEventStreamReactiveSwitch<MqttC
     await connection.unsubscribeAsync(topic)
     this._loggingEvent$(`Stop subscription from topic:${topic}`)
   }
+
+  async stop(): Promise<void> {
+    await super.stop()
+    this._loggingEvent$(`Stop subscription from all topics`)
+  }
 }
