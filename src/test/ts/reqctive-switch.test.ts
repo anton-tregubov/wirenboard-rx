@@ -1,7 +1,7 @@
 import { InMemoryReactiveSwitch } from '@main/core/in-memory-reactive-switch'
 import { combineLatest, map } from 'rxjs'
 import 'jest-extended'
-import { TopicValueEvent } from '@main/core/topic-base-event-stream-reactive-switch'
+import { TopicValueEvent } from '@main/core/topic-events-stream-reactive-switch'
 
 jest.useRealTimers()
 

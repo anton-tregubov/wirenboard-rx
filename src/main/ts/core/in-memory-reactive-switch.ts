@@ -1,13 +1,13 @@
 import { EMPTY, map, Observable, Subject, tap, timer } from 'rxjs'
 import {
+  AbstractTopicEventsStreamReactiveSwitch,
   Options,
-  TopicBaseEventStreamReactiveSwitch,
   TopicName,
   TopicValueEvent,
-} from '@main/core/topic-base-event-stream-reactive-switch'
+} from '@main/core/topic-events-stream-reactive-switch'
 import { Duration } from '@main/core/utils'
 
-export class InMemoryReactiveSwitch extends TopicBaseEventStreamReactiveSwitch<never> {
+export class InMemoryReactiveSwitch extends AbstractTopicEventsStreamReactiveSwitch<never> {
   private readonly _consumedEvents: TopicValueEvent[]
   private readonly _eventProducer: Subject<TopicValueEvent>
   public consumerProcessingDelay: Duration

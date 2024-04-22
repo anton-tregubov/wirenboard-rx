@@ -1,4 +1,4 @@
-import { Count, isDefine, Optional } from './utils'
+import { Integer, isDefine, Optional } from './utils'
 import {
   BehaviorSubject,
   concatMap,
@@ -47,8 +47,8 @@ export interface UnprocessedTopicValueEvent {
 }
 
 export interface Options {
-  readonly bufferSizeForProducer: Count
-  readonly providerConcurrency: Count
+  readonly bufferSizeForProducer: Integer
+  readonly providerConcurrency: Integer
   readonly notProcessingConsumerValue$: InfinityObserver<UnprocessedTopicValueEvent>
   readonly notProcessingProviderValue$: InfinityObserver<UnprocessedTopicValueEvent>
 }
@@ -91,7 +91,27 @@ export interface TopicProducer<Value> {
   readonly subscriber: Partial<Observer<Value>>
 }
 
-export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
+export interface TopicEventStreamReactiveSwitch {
+  start(): Promise<void>
+
+  stop(): Promise<void>
+
+  createColdTopicConsumer(topicName: TopicName): ColdTopicConsumer<string>
+
+  createColdTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>): ColdTopicConsumer<Value>
+
+  createHotTopicConsumer(topicName: TopicName): HotTopicConsumer<Optional<string>>
+
+  createHotTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>): HotTopicConsumer<Optional<Value>>
+
+  createHotTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>, initialValue: Value): HotTopicConsumer<Value>
+
+  createTopicProducer(topicName: TopicName): TopicProducer<string>
+
+  createTopicProducer<Value>(topicName: TopicName, serializer: TopicValueSerializer<Value>): TopicProducer<Value>
+}
+
+export abstract class AbstractTopicEventsStreamReactiveSwitch<Connection> implements TopicEventStreamReactiveSwitch {
   private readonly _topicToSubject: Map<TopicName, SmartSubject<unknown>>
   private readonly _topicToObserver: Map<TopicName, SmartObserver<unknown>>
   private readonly _deferredTopicSubscription: TopicName[]
@@ -242,7 +262,9 @@ export abstract class TopicBaseEventStreamReactiveSwitch<Connection> {
     }
   }
 
-  public createTopicProducer<Value>(topicName: TopicName, serializer: TopicValueSerializer<Value>): TopicProducer<Value> {
+  createTopicProducer(topicName: TopicName): TopicProducer<string>
+  createTopicProducer<Value>(topicName: TopicName, serializer: TopicValueSerializer<Value>): TopicProducer<Value>
+  public createTopicProducer<Value>(topicName: TopicName, serializer: TopicValueSerializer<Value> = value => String(value)): TopicProducer<Value> {
     this.assertPrefixTopicName(topicName)
     let smartObserver = this._topicToObserver.get(topicName) as Optional<SmartObserver<Value>>
     if (!isDefine(smartObserver)) {

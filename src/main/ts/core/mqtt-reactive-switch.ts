@@ -1,12 +1,12 @@
 import { connectAsync, IClientOptions, MqttClient } from 'mqtt'
 import { from, Observable } from 'rxjs'
 import {
+  AbstractTopicEventsStreamReactiveSwitch,
   InfinityObserver,
   Options,
-  TopicBaseEventStreamReactiveSwitch,
   TopicName,
   TopicValueEvent,
-} from '@main/core/topic-base-event-stream-reactive-switch'
+} from '@main/core/topic-events-stream-reactive-switch'
 
 export type LogEvent = string
 
@@ -15,7 +15,7 @@ export interface MqttReactiveSwitchOptions extends Options {
   readonly loggingEvent$: InfinityObserver<LogEvent>
 }
 
-export class MqttReactiveSwitch extends TopicBaseEventStreamReactiveSwitch<MqttClient> {
+export class MqttReactiveSwitch extends AbstractTopicEventsStreamReactiveSwitch<MqttClient> {
   private readonly _connectionOptions: IClientOptions
   private readonly _loggingEvent$: InfinityObserver<LogEvent>
 
