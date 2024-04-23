@@ -20,7 +20,6 @@ import {
   TopicValueSerializer,
 } from '@main/core/topic-events-stream-reactive-switch'
 import { Optional, propertyKeys } from '@main/core/utils'
-import { isNumber } from 'lodash-es'
 
 type PartialTopicName<Config extends TopicsSubscriptionConfig> = keyof Config
 type TopicNameResolver<Config extends TopicsSubscriptionConfig> = (suffix: Optional<PartialTopicName<Config>>) => TopicName
@@ -31,7 +30,16 @@ const VALUE_PARSERS = {
 } satisfies Record<TopicValueType, TopicValueParser<unknown>>
 
 const VALUE_SERIALIZERS = {
-  [TOPIC_VALUE_SWITCH]: val => isNumber(val) ? (val > 0).toString() : '0',
+  [TOPIC_VALUE_SWITCH]: val => {
+    switch (val) {
+      case true:
+        return '0'
+      case false:
+        return '1'
+      default:
+        throw new Error(`Boolean expected. But ${val}`)
+    }
+  },
   [TOPIC_VALUE_COUNTER]: Number.toString,
 } satisfies Record<TopicValueType, TopicValueSerializer<unknown>>
 
