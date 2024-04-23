@@ -1,10 +1,10 @@
 import { Integer, IntegerRange, range } from '@main/core/utils'
 import {
-  CONTROL_TYPE_READ,
-  CONTROL_TYPE_READ_AND_WRITE,
-  ControlMeta,
-  PhysicalColdWbDevice,
-  PhysicalHotWbDevice,
+  FIELD_DESTINY_READ,
+  FIELD_DESTINY_READ_AND_WRITE,
+  PhysicalWbDevice,
+  TOPIC_VALUE_COUNTER,
+  TOPIC_VALUE_SWITCH,
   TopicSubscriptionConfig,
 } from '@main/modules/core/definitions'
 
@@ -23,9 +23,9 @@ const PRESS_TYPE_LONG = 'Long'
 
 type PressTypes = typeof PRESS_TYPE_SINGLE | typeof PRESS_TYPE_DOUBLE | typeof PRESS_TYPE_LONG
 
-type RelayTopicSubscriptionConfig<Index extends Integer> = TopicSubscriptionConfig<`${typeof PROPERTY_RELAY}${Index}`, boolean, typeof CONTROL_TYPE_READ_AND_WRITE, ControlMeta>;
-type InputTopicSubscriptionConfig<Index extends Integer> = TopicSubscriptionConfig<`${typeof PROPERTY_INPUT}${Index}`, boolean, typeof CONTROL_TYPE_READ, ControlMeta>;
-type InputPressCountTopicSubscriptionConfig<Index extends Integer, PressType extends string> = TopicSubscriptionConfig<`${typeof PROPERTY_INPUT}${Index}${typeof PROPERTY_PRESS}${PressType}${typeof PROPERTY_COUNTER}`, Integer, typeof CONTROL_TYPE_READ, ControlMeta>;
+type RelayTopicSubscriptionConfig<Index extends Integer> = TopicSubscriptionConfig<`${typeof PROPERTY_RELAY}${Index}`, typeof FIELD_DESTINY_READ_AND_WRITE, typeof TOPIC_VALUE_SWITCH>;
+type InputTopicSubscriptionConfig<Index extends Integer> = TopicSubscriptionConfig<`${typeof PROPERTY_INPUT}${Index}`, typeof FIELD_DESTINY_READ, typeof TOPIC_VALUE_SWITCH>;
+type InputPressCountTopicSubscriptionConfig<Index extends Integer, PressType extends string> = TopicSubscriptionConfig<`${typeof PROPERTY_INPUT}${Index}${typeof PROPERTY_PRESS}${PressType}${typeof PROPERTY_COUNTER}`, typeof FIELD_DESTINY_READ, typeof TOPIC_VALUE_COUNTER>;
 
 type WbMrcRelayTopicsSubscriptionConfig<Count extends Integer> = {
   readonly [Index in Count as `${typeof TOPIC_RELAY}${Index}`]: RelayTopicSubscriptionConfig<Index>
@@ -44,33 +44,29 @@ type WbMrcConfig<Count extends Integer, PressType extends PressTypes> =
 
 type WbMr6cConfig = WbMrcConfig<IntegerRange<1, 7>, typeof PRESS_TYPE_SINGLE | typeof PRESS_TYPE_DOUBLE | typeof PRESS_TYPE_LONG>
 
-export type ColdWbMr6c = PhysicalColdWbDevice<WbMr6cConfig>
-export type HotWbMr6c = PhysicalHotWbDevice<WbMr6cConfig>
+export type WbMr6cDevice = PhysicalWbDevice<WbMr6cConfig>
 
 function relayTopicSubscriptionConfig<Index extends Integer>(index: Index): RelayTopicSubscriptionConfig<Index> {
   return {
-    fieldName: `${PROPERTY_RELAY}${index}`,
-    controlType: CONTROL_TYPE_READ_AND_WRITE,
-    valueType: undefined as never,
-    controlMeta: undefined as never,
+    fieldBaseName: `${PROPERTY_RELAY}${index}`,
+    fieldDestiny: FIELD_DESTINY_READ_AND_WRITE,
+    fieldValueType: TOPIC_VALUE_SWITCH,
   }
 }
 
 function inputTopicSubscriptionConfig<Index extends Integer>(index: Index): InputTopicSubscriptionConfig<Index> {
   return {
-    fieldName: `${PROPERTY_INPUT}${index}`,
-    controlType: CONTROL_TYPE_READ,
-    valueType: undefined as never,
-    controlMeta: undefined as never,
+    fieldBaseName: `${PROPERTY_INPUT}${index}`,
+    fieldDestiny: FIELD_DESTINY_READ,
+    fieldValueType: TOPIC_VALUE_SWITCH,
   }
 }
 
 function inputPressCountTopicSubscriptionConfig<Index extends Integer, PressType extends PressTypes>(index: Index, pressType: PressType): InputPressCountTopicSubscriptionConfig<Index, PressType> {
   return {
-    fieldName: `${PROPERTY_INPUT}${index}${PROPERTY_PRESS}${pressType}${PROPERTY_COUNTER}`,
-    controlType: CONTROL_TYPE_READ,
-    valueType: undefined as never,
-    controlMeta: undefined as never,
+    fieldBaseName: `${PROPERTY_INPUT}${index}${PROPERTY_PRESS}${pressType}${PROPERTY_COUNTER}`,
+    fieldDestiny: FIELD_DESTINY_READ,
+    fieldValueType: TOPIC_VALUE_COUNTER,
   }
 }
 
@@ -103,4 +99,4 @@ export const WB_MR6C_CONFIG: WbMr6cConfig = {
 
 }
 
-export const WB_MR6C_TOPIC_PREFIX = 'wb-mr6c'
+export const WB_MR6C_TOPIC_IDENTIFIER = 'wb-mr6c'

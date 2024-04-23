@@ -1,6 +1,5 @@
 import { Integer, isDefine, Optional } from './utils'
 import {
-  BehaviorSubject,
   concatMap,
   EMPTY,
   groupBy,
@@ -58,19 +57,10 @@ export interface TopicValueEvent {
   readonly value: string;
 }
 
-type SmartSubject<Value> = ColdSmartSubject<Value> | HotSmartSubject<Value>
-
-interface CommonSmartSubject<Value> {
+interface SmartSubject<Value> {
+  readonly subject: Subject<Value>;
   readonly observable: Observable<Value>;
   readonly parser: TopicValueParser<Value>;
-}
-
-interface ColdSmartSubject<Value> extends CommonSmartSubject<Value> {
-  readonly subject: Subject<Value>;
-}
-
-interface HotSmartSubject<Value> extends CommonSmartSubject<Value> {
-  readonly subject: BehaviorSubject<Value>;
 }
 
 interface SmartObserver<Value> {
@@ -78,17 +68,12 @@ interface SmartObserver<Value> {
   readonly serializer: TopicValueSerializer<Value>;
 }
 
-export interface HotTopicConsumer<Value> {
-  readonly changes$: Observable<Value>
-  readonly currentValue: Value
-}
-
-export interface ColdTopicConsumer<Value> {
+export interface TopicConsumer<Value> {
   readonly changes$: Observable<Value>
 }
 
 export interface TopicProducer<Value> {
-  readonly subscriber: Partial<Observer<Value>>
+  readonly subscriber: Pick<Observer<Value>, 'next'>
 }
 
 export interface TopicEventStreamReactiveSwitch {
@@ -96,15 +81,9 @@ export interface TopicEventStreamReactiveSwitch {
 
   stop(): Promise<void>
 
-  createColdTopicConsumer(topicName: TopicName): ColdTopicConsumer<string>
+  createTopicConsumer(topicName: TopicName): TopicConsumer<string>
 
-  createColdTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>): ColdTopicConsumer<Value>
-
-  createHotTopicConsumer(topicName: TopicName): HotTopicConsumer<Optional<string>>
-
-  createHotTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>): HotTopicConsumer<Optional<Value>>
-
-  createHotTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>, initialValue: Value): HotTopicConsumer<Value>
+  createTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>): TopicConsumer<Value>
 
   createTopicProducer(topicName: TopicName): TopicProducer<string>
 
@@ -193,19 +172,11 @@ export abstract class AbstractTopicEventsStreamReactiveSwitch<Connection> implem
     }
   }
 
-  private isHotSmartSubject<Value>(sub: SmartSubject<Value>): sub is HotSmartSubject<Value> {
-    return sub.subject instanceof BehaviorSubject
-  }
-
-  private isColdSmartSubject<Value>(sub: SmartSubject<Value>): sub is ColdSmartSubject<Value> {
-    return !this.isHotSmartSubject(sub)
-  }
-
-  public createColdTopicConsumer(topicName: TopicName): ColdTopicConsumer<string>
-  public createColdTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>): ColdTopicConsumer<Value>
-  createColdTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value> = value => value as Value): ColdTopicConsumer<Value> {
-    this.assertPrefixTopicName(topicName)
-    let smartSubject = this._topicToSubject.get(topicName) as Optional<ColdSmartSubject<Value>>
+  public createTopicConsumer(topicName: TopicName): TopicConsumer<string>
+  public createTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>): TopicConsumer<Value>
+  createTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value> = value => value as Value): TopicConsumer<Value> {
+    this.assertTopicName(topicName)
+    let smartSubject = this._topicToSubject.get(topicName) as Optional<SmartSubject<Value>>
     if (!isDefine(smartSubject)) {
       const subject = new Subject<Value>()
       smartSubject = {
@@ -216,47 +187,15 @@ export abstract class AbstractTopicEventsStreamReactiveSwitch<Connection> implem
           () => this._topicToSubject.get(topicName)?.subject === subject && this.stopSubscription(topicName),
         ),
         parser,
-      } satisfies ColdSmartSubject<Value>
-      this._topicToSubject.set(topicName, smartSubject as ColdSmartSubject<unknown>)
-    }
-    if (!this.isColdSmartSubject(smartSubject)) {
-      throw new Error(`Try to subscribe to the topic ${topicName} that already have another type of subscription`)
+      } satisfies SmartSubject<Value>
+      this._topicToSubject.set(topicName, smartSubject as SmartSubject<unknown>)
     }
     return {
       changes$: smartSubject.observable,
     }
   }
 
-  public createHotTopicConsumer(topicName: TopicName): HotTopicConsumer<Optional<string>>
-  public createHotTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>): HotTopicConsumer<Optional<Value>>
-  public createHotTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value>, initialValue: Value): HotTopicConsumer<Value>
-  createHotTopicConsumer<Value>(topicName: TopicName, parser: TopicValueParser<Value> = (value) => value as Value, initialValue: Value = undefined as Value): HotTopicConsumer<Value> {
-    this.assertPrefixTopicName(topicName)
-    let smartSubject = this._topicToSubject.get(topicName) as Optional<HotSmartSubject<Value>>
-    if (!isDefine(smartSubject)) {
-      const behaviorSubject = new BehaviorSubject<Value>(initialValue)
-      smartSubject = {
-        subject: behaviorSubject,
-        observable: behaviorSubject.asObservable(),
-        parser,
-      } as HotSmartSubject<Value>
-      this.startSubscription(topicName)
-      behaviorSubject.subscribe().add(() => this.stopSubscription(topicName))
-      this._topicToSubject.set(topicName, smartSubject as HotSmartSubject<unknown>)
-    } else {
-      if (!this.isHotSmartSubject(smartSubject)) {
-        throw new Error(`Try to subscribe to the topic ${topicName} that already have another type of subscription`)
-      }
-    }
-    return {
-      changes$: smartSubject.observable,
-      get currentValue() {
-        return smartSubject.subject.value
-      },
-    }
-  }
-
-  private assertPrefixTopicName(topicName: string) {
+  private assertTopicName(topicName: string) {
     if (topicName.endsWith('#')) {
       throw new Error('Not implemented not direct topic subscription')
     }
@@ -265,7 +204,7 @@ export abstract class AbstractTopicEventsStreamReactiveSwitch<Connection> implem
   createTopicProducer(topicName: TopicName): TopicProducer<string>
   createTopicProducer<Value>(topicName: TopicName, serializer: TopicValueSerializer<Value>): TopicProducer<Value>
   public createTopicProducer<Value>(topicName: TopicName, serializer: TopicValueSerializer<Value> = value => String(value)): TopicProducer<Value> {
-    this.assertPrefixTopicName(topicName)
+    this.assertTopicName(topicName)
     let smartObserver = this._topicToObserver.get(topicName) as Optional<SmartObserver<Value>>
     if (!isDefine(smartObserver)) {
       const observer: InfinityObserver<Value> = value => {

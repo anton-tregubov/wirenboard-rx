@@ -17,3 +17,7 @@ export function * range<From extends Integer, To extends Integer>(from: From, to
     yield i as IntegerRange<From, To>
   }
 }
+
+export function propertyKeys<Jso extends Record<Exclude<PropertyKey, number>, unknown>>(jso: Jso): (keyof Jso)[] {
+  return Reflect.ownKeys(jso) as (keyof Jso)[]
+}

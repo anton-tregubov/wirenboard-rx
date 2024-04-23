@@ -1,10 +1,13 @@
 import { Observable } from 'rxjs'
-import { IntegerRange, Optional } from '@main/core/utils'
+import { Integer, IntegerRange, Optional } from '@main/core/utils'
 
-export const CONTROL_TYPE_READ = 'read'
-export const CONTROL_TYPE_READ_AND_WRITE = 'read-and-write'
-export const CONTROL_TYPE_ACTION = 'action'
-export type ControlType = typeof CONTROL_TYPE_READ | typeof CONTROL_TYPE_READ_AND_WRITE | typeof CONTROL_TYPE_ACTION
+export const FIELD_DESTINY_READ = 'read'
+export const FIELD_DESTINY_READ_AND_WRITE = 'read-and-write'
+export const FIELD_DESTINY_ACTION = 'action'
+export type FieldDestiny =
+  typeof FIELD_DESTINY_READ
+  | typeof FIELD_DESTINY_READ_AND_WRITE
+  | typeof FIELD_DESTINY_ACTION
 
 export const LANGUAGE_ENGLISH = 'en'
 export const LANGUAGE_RUSSIAN = 'ru'
@@ -30,82 +33,84 @@ export interface NumberControlMeta extends BaseControlMeta {
 
 export type ControlMeta = BooleanControlMeta | NumberControlMeta
 
-export interface ControlError {
+export interface ControlMetaError {
 // ??? ask wb
 }
 
-//TODO rename to TopicDefinition
-export interface TopicSubscriptionConfig<FieldName extends string, VType, CType extends ControlType, MetaType extends ControlMeta> {
-  readonly fieldName: FieldName,
-  readonly valueType: VType,
-  readonly controlType: CType,
-  readonly controlMeta: MetaType,
+export interface DeviceMetaError {
+// ??? ask wb
 }
 
-export type TopicsSubscriptionConfig<AllowedControlType extends ControlType = ControlType, AllowedControlMeta extends ControlMeta = ControlMeta> = Record<string, TopicSubscriptionConfig<string, unknown, AllowedControlType, AllowedControlMeta>>
+export const TOPIC_VALUE_COUNTER = 'counter'
+export const TOPIC_VALUE_SWITCH = 'switch'
 
-type ExtractPropertyKeysByControlType<Source extends TopicsSubscriptionConfig, CType extends ControlType> = {
-  [Property in keyof Source]: (Source[Property]['controlType']) extends CType ? Property : never
+export type TopicValueType =
+  | typeof TOPIC_VALUE_COUNTER
+  | typeof TOPIC_VALUE_SWITCH
+
+interface TopicValueTypeToNativeType {
+  [TOPIC_VALUE_COUNTER]: Integer
+  [TOPIC_VALUE_SWITCH]: boolean
+}
+
+interface TopicValueTypeToControlMetaType {
+  [TOPIC_VALUE_COUNTER]: NumberControlMeta
+  [TOPIC_VALUE_SWITCH]: BooleanControlMeta
+}
+
+export interface TopicSubscriptionConfig<Name extends string, Destiny extends FieldDestiny, Type extends TopicValueType> {
+  readonly fieldBaseName: Name,
+  readonly fieldValueType: Type,
+  readonly fieldDestiny: Destiny,
+}
+
+export type TopicsSubscriptionConfig<AllowedFieldDestiny extends FieldDestiny = FieldDestiny, AllowedFieldType extends TopicValueType = TopicValueType> = Record<string, TopicSubscriptionConfig<string, AllowedFieldDestiny, AllowedFieldType>>
+
+type ExtractPropertyKeysByFieldDestiny<Source extends TopicsSubscriptionConfig, Destiny extends FieldDestiny> = {
+  [Property in keyof Source]: (Source[Property]['fieldDestiny']) extends Destiny ? Property : never
 }[keyof Source]
 
-type ColdValueTopicReaderProperties<Config extends TopicsSubscriptionConfig> = {
-  readonly [Control in ExtractPropertyKeysByControlType<Config, typeof CONTROL_TYPE_READ | typeof CONTROL_TYPE_READ_AND_WRITE> as `${Config[Control]['fieldName']}$`]: Observable<Config[Control]['valueType']>
-}
-
-type HotValueTopicReaderProperties<Config extends TopicsSubscriptionConfig> = {
-  readonly [Control in ExtractPropertyKeysByControlType<Config, typeof CONTROL_TYPE_READ> as `${Config[Control]['fieldName']}`]: Optional<Config[Control]['valueType']>
+type ValueTopicReaderProperties<Config extends TopicsSubscriptionConfig> = {
+  readonly [Control in ExtractPropertyKeysByFieldDestiny<Config, typeof FIELD_DESTINY_READ | typeof FIELD_DESTINY_READ_AND_WRITE> as `${Config[Control]['fieldBaseName']}$`]: Observable<TopicValueTypeToNativeType[Config[Control]['fieldValueType']]>
 }
 
 type ValueTopicWriterProperties<Config extends TopicsSubscriptionConfig> = {
-  /*writeonly*/-readonly [Control in ExtractPropertyKeysByControlType<Config, typeof CONTROL_TYPE_READ_AND_WRITE> as `${Config[Control]['fieldName']}`]: Config[Control]['valueType']
+  /*writeonly*/-readonly [Control in ExtractPropertyKeysByFieldDestiny<Config, typeof FIELD_DESTINY_READ_AND_WRITE> as `${Config[Control]['fieldBaseName']}`]: TopicValueTypeToNativeType[Config[Control]['fieldValueType']]
 }
 
 type ActionCallProperties<Config extends TopicsSubscriptionConfig> = {
-  readonly [Control in ExtractPropertyKeysByControlType<Config, typeof CONTROL_TYPE_ACTION> as `${Config[Control]['fieldName']}`]: () => void
+  readonly [Control in ExtractPropertyKeysByFieldDestiny<Config, typeof FIELD_DESTINY_ACTION> as `${Config[Control]['fieldBaseName']}`]: () => void
 }
 
-type ColdControlTopicReaderProperties<Config extends TopicsSubscriptionConfig> = {
-  readonly [Control in keyof Config as `${Config[Control]['fieldName']}Meta$`]: Observable<Config[Control]['controlMeta']>
+type ControlTopicReaderProperties<Config extends TopicsSubscriptionConfig> = {
+  readonly [Control in keyof Config as `${Config[Control]['fieldBaseName']}Meta$`]: Observable<TopicValueTypeToControlMetaType[Config[Control]['fieldValueType']]>
 }
 
-type HotControlTopicReaderProperties<Config extends TopicsSubscriptionConfig> = {
-  readonly [Control in keyof Config as `${Config[Control]['fieldName']}Meta`]: Optional<Config[Control]['controlMeta']>
+type ControlErrorTopicReaderProperties<Config extends TopicsSubscriptionConfig> = {
+  readonly [Control in keyof Config as `${Config[Control]['fieldBaseName']}Error$`]: Observable<ControlMetaError>
 }
 
-type ColdControlErrorTopicReaderProperties<Config extends TopicsSubscriptionConfig> = {
-  readonly [Control in keyof Config as `${Config[Control]['fieldName']}Error$`]: Observable<ControlError>
-}
-
-type ColdWbDeviceMetaReaderProperties = {
+type WbDeviceMetaReaderProperties = {
   readonly meta$: Observable<DeviceMeta>
-}
-
-type HotWbDeviceMetaReaderProperties = {
-  get meta(): DeviceMeta
+  readonly error$: Observable<DeviceMetaError>
 }
 
 type WbDeviceMetaWriterProperties = {
   set meta(v: Optional<DeviceMeta>)
 }
 
-export type PhysicalColdWbDevice<Config extends TopicsSubscriptionConfig> =
-  ColdWbDeviceMetaReaderProperties
-  & ColdValueTopicReaderProperties<Config>
+export type PhysicalWbDevice<Config extends TopicsSubscriptionConfig> =
+  WbDeviceMetaReaderProperties
+  & ValueTopicReaderProperties<Config>
   & ValueTopicWriterProperties<Config>
   & ActionCallProperties<Config>
-  & ColdControlTopicReaderProperties<Config>
-  & ColdControlErrorTopicReaderProperties<Config>
+  & ControlTopicReaderProperties<Config>
+  & ControlErrorTopicReaderProperties<Config>
 
-export type PhysicalHotWbDevice<Config extends TopicsSubscriptionConfig> =
-  PhysicalColdWbDevice<Config> & HotValueTopicReaderProperties<Config> & HotWbDeviceMetaReaderProperties
-
-export type VirtualColdWbDevice<Config extends TopicsSubscriptionConfig<typeof CONTROL_TYPE_READ_AND_WRITE>> =
-  PhysicalColdWbDevice<Config> & WbDeviceMetaWriterProperties
-
-export type VirtualHotWbDevice<Config extends TopicsSubscriptionConfig<typeof CONTROL_TYPE_READ_AND_WRITE>> =
-  VirtualColdWbDevice<Config>
-  & HotValueTopicReaderProperties<Config>
-  & HotControlTopicReaderProperties<Config>
-  & HotWbDeviceMetaReaderProperties
+export type VirtualWbDevice<Config extends TopicsSubscriptionConfig<typeof FIELD_DESTINY_READ_AND_WRITE>> =
+  PhysicalWbDevice<Config> & WbDeviceMetaWriterProperties
 
 export type ModbusSlave = IntegerRange<1, 250/*or less?*/>
+
+export const DEVICES_TOPIC_IDENTIFIER = 'devices'
+export const CONTROLS_TOPIC_IDENTIFIER = 'controls'

@@ -19,9 +19,9 @@ describe('reactive switch', () => {
     await rw.stop()
   })
 
-  it('e2e cold subscription', async () => {
-    const topicIn1 = rw.createColdTopicConsumer('Topic in 1', value => parseInt(value))
-    const topicIn2 = rw.createColdTopicConsumer('Topic in 2', value => parseInt(value))
+  it('e2e subscription', async () => {
+    const topicIn1 = rw.createTopicConsumer('Topic in 1', value => parseInt(value))
+    const topicIn2 = rw.createTopicConsumer('Topic in 2', value => parseInt(value))
     const topicOut = rw.createTopicProducer<number>('Topic out', value => value.toString())
     const subscription = combineLatest([topicIn1.changes$, topicIn2.changes$])
       .pipe(
@@ -44,67 +44,25 @@ describe('reactive switch', () => {
     expect(rw.subscribedTopics).toStrictEqual([])
   })
 
-  it('e2e hot subscription', async () => {
-    const topicIn1 = rw.createHotTopicConsumer('Topic in 1', value => parseInt(value), -1)
-    const topicIn2 = rw.createHotTopicConsumer('Topic in 2', value => parseInt(value), -1)
-    const topicOut = rw.createTopicProducer<number>('Topic out', value => value.toString())
-    const subscription = combineLatest([topicIn1.changes$, topicIn2.changes$])
-      .pipe(
-        map(([d1, d2]) => d1 + d2),
-      )
-      .subscribe(topicOut.subscriber)
-
-    expect(topicIn1.currentValue).toBe(-1)
-    expect(topicIn2.currentValue).toBe(-1)
-
-    rw.event('Topic in 2', '1')
-    rw.event('Topic in 2', '2')
-
-    expect(topicIn1.currentValue).toBe(-1)
-    expect(topicIn2.currentValue).toBe(2)
-
-    rw.event('Topic in 1', '1')
-
-    expect(topicIn1.currentValue).toBe(1)
-    expect(topicIn2.currentValue).toBe(2)
-
-    await rw.waitPendingEvents()
-
-    expect(rw.subscribedTopics).toContainValues(['Topic in 1', 'Topic in 2'])
-    expect(rw.consumedEvents).toContainAllValues([
-      { topic: 'Topic out', value: '-2' },
-      { topic: 'Topic out', value: '0' },
-      { topic: 'Topic out', value: '1' },
-      { topic: 'Topic out', value: '3' },
-    ] satisfies TopicValueEvent[])
-
-    subscription.unsubscribe()
-    expect(rw.subscribedTopics).toContainValues(['Topic in 1', 'Topic in 2'])
-  })
-
   it('restart', async () => {
-    const hot = rw.createHotTopicConsumer('Hot', value => parseInt(value), -1)
-    const cold = rw.createColdTopicConsumer('Cold', value => parseInt(value))
+    const topicIn = rw.createTopicConsumer('In', value => parseInt(value))
     const topicOut = rw.createTopicProducer<number>('Out', value => value.toString())
 
-    expect(rw.subscribedTopics).toStrictEqual(['Hot'])
+    topicIn.changes$.pipe(map(v => 2 * v)).subscribe(topicOut.subscriber)
+
+    expect(rw.subscribedTopics).toStrictEqual(['In'])
     await rw.stop()
     expect(rw.subscribedTopics).toStrictEqual([])
 
     await rw.start()
-    expect(rw.subscribedTopics).toStrictEqual(['Hot'])
+    expect(rw.subscribedTopics).toStrictEqual(['In'])
 
-    combineLatest([hot.changes$, cold.changes$]).pipe(map(([d1, d2]) => d1 + d2)).subscribe(topicOut.subscriber)
-
-    rw.event('Hot', '1')
-    rw.event('Cold', '2')
+    rw.event('In', '2')
 
     await rw.waitPendingEvents()
 
-    expect(rw.subscribedTopics).toContainValues(['Hot', 'Cold'])
-
     expect(rw.consumedEvents).toContainAllValues([
-      { topic: 'Out', value: '3' },
+      { topic: 'Out', value: '4' },
     ] satisfies TopicValueEvent[])
 
   })
