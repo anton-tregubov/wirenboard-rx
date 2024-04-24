@@ -40,9 +40,9 @@ const VALUE_SERIALIZERS = {
   [TOPIC_VALUE_SWITCH]: val => {
     switch (val) {
       case true:
-        return '0'
-      case false:
         return '1'
+      case false:
+        return '0'
       default:
         throw new Error(`Boolean expected. But ${val}`)
     }
@@ -81,13 +81,25 @@ export class ModbusDeviceFactoryImpl implements ModbusDeviceFactory {
       switch (fieldDestiny) {
         // @ts-expect-error cause define write and read will define later
         case FIELD_DESTINY_READ_AND_WRITE:
-          Object.assign(collector, { set [fieldBaseName](value: unknown) {valueProducer.subscriber.next(value)} })
+          Object.defineProperty(collector, fieldBaseName, {
+            enumerable: true,
+            set: (value) => valueProducer.subscriber.next(value),
+            get: () => {throw new Error('By design, you should subscribe to  field end with $ to read value. If you want have last value in topic you can wrap observable with <todo> ')},
+          })
         // eslint-disable-next-line no-fallthrough
         case FIELD_DESTINY_READ:
-          Object.assign(collector, { [`${fieldBaseName}${PROPERTY_NAME_SUFFIX_OBSERVABLE}`]: valueConsumer.changes$ })
+          Object.defineProperty(collector, `${fieldBaseName}${PROPERTY_NAME_SUFFIX_OBSERVABLE}`, {
+            value: valueConsumer.changes$,
+            writable: false,
+            enumerable: true,
+          })
           break
         case FIELD_DESTINY_ACTION:
-          Object.assign(collector, { [fieldBaseName]: () => {valueProducer.subscriber.next('1')} })
+          Object.defineProperty(collector, fieldBaseName, {
+            value: () => valueProducer.subscriber.next('1'),
+            writable: false,
+            enumerable: true,
+          })
       }
       return collector
     }, {
