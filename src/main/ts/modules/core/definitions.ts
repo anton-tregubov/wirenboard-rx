@@ -12,6 +12,10 @@ export type FieldDestiny =
 export const LANGUAGE_ENGLISH = 'en'
 export const LANGUAGE_RUSSIAN = 'ru'
 
+export const PROPERTY_NAME_SUFFIX_OBSERVABLE = '$'
+export const PROPERTY_NAME_SUFFIX_META = 'Meta'
+export const PROPERTY_NAME_SUFFIX_ERROR = 'Error'
+
 export type Language = typeof LANGUAGE_ENGLISH | typeof LANGUAGE_RUSSIAN
 
 export interface DeviceMeta {
@@ -71,7 +75,7 @@ type ExtractPropertyKeysByFieldDestiny<Source extends TopicsSubscriptionConfig, 
 }[keyof Source]
 
 type ValueTopicReaderProperties<Config extends TopicsSubscriptionConfig> = {
-  readonly [Control in ExtractPropertyKeysByFieldDestiny<Config, typeof FIELD_DESTINY_READ | typeof FIELD_DESTINY_READ_AND_WRITE> as `${Config[Control]['fieldBaseName']}$`]: Observable<TopicValueTypeToNativeType[Config[Control]['fieldValueType']]>
+  readonly [Control in ExtractPropertyKeysByFieldDestiny<Config, typeof FIELD_DESTINY_READ | typeof FIELD_DESTINY_READ_AND_WRITE> as `${Config[Control]['fieldBaseName']}${typeof PROPERTY_NAME_SUFFIX_OBSERVABLE}`]: Observable<TopicValueTypeToNativeType[Config[Control]['fieldValueType']]>
 }
 
 type ValueTopicWriterProperties<Config extends TopicsSubscriptionConfig> = {
@@ -83,11 +87,11 @@ type ActionCallProperties<Config extends TopicsSubscriptionConfig> = {
 }
 
 type ControlTopicReaderProperties<Config extends TopicsSubscriptionConfig> = {
-  readonly [Control in keyof Config as `${Config[Control]['fieldBaseName']}Meta$`]: Observable<TopicValueTypeToControlMetaType[Config[Control]['fieldValueType']]>
+  readonly [Control in keyof Config as `${Config[Control]['fieldBaseName']}${typeof PROPERTY_NAME_SUFFIX_META}${typeof PROPERTY_NAME_SUFFIX_OBSERVABLE}`]: Observable<TopicValueTypeToControlMetaType[Config[Control]['fieldValueType']]>
 }
 
 type ControlErrorTopicReaderProperties<Config extends TopicsSubscriptionConfig> = {
-  readonly [Control in keyof Config as `${Config[Control]['fieldBaseName']}Error$`]: Observable<ControlMetaError>
+  readonly [Control in keyof Config as `${Config[Control]['fieldBaseName']}${typeof PROPERTY_NAME_SUFFIX_ERROR}${typeof PROPERTY_NAME_SUFFIX_OBSERVABLE}`]: Observable<ControlMetaError>
 }
 
 type WbDeviceMetaReaderProperties = {

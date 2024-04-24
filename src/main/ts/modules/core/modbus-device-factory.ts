@@ -7,6 +7,9 @@ import {
   FIELD_DESTINY_READ,
   FIELD_DESTINY_READ_AND_WRITE,
   PhysicalWbDevice,
+  PROPERTY_NAME_SUFFIX_ERROR,
+  PROPERTY_NAME_SUFFIX_META,
+  PROPERTY_NAME_SUFFIX_OBSERVABLE,
   TOPIC_VALUE_COUNTER,
   TOPIC_VALUE_SWITCH,
   TopicsSubscriptionConfig,
@@ -23,6 +26,10 @@ import { Optional, propertyKeys } from '@main/core/utils'
 
 type PartialTopicName<Config extends TopicsSubscriptionConfig> = keyof Config
 type TopicNameResolver<Config extends TopicsSubscriptionConfig> = (suffix: Optional<PartialTopicName<Config>>) => TopicName
+
+const TOPIC_SUFFIX_VALUE_WRITER = '/on'
+const TOPIC_SUFFIX_META_READER = '/meta'
+const TOPIC_SUFFIX_META_ERROR_READER = '/meta/error'
 
 const VALUE_PARSERS = {
   [TOPIC_VALUE_SWITCH]: str => Boolean(parseInt(str)),
@@ -63,13 +70,13 @@ export class ModbusDeviceFactoryImpl implements ModbusDeviceFactory {
     return topicNameIdentities.reduce((collector, topicIdentifier) => {
       const baseTopicName = topicNameResolver(topicIdentifier)
       const { fieldBaseName, fieldValueType, fieldDestiny } = config[topicIdentifier]
-      const valueProducer = this._reactiveSwitch.createTopicProducer<unknown>(`${baseTopicName}/on`, VALUE_SERIALIZERS[fieldValueType])
+      const valueProducer = this._reactiveSwitch.createTopicProducer<unknown>(`${baseTopicName}${TOPIC_SUFFIX_VALUE_WRITER}`, VALUE_SERIALIZERS[fieldValueType])
       const valueConsumer = this._reactiveSwitch.createTopicConsumer<unknown>(baseTopicName, VALUE_PARSERS[fieldValueType])
-      const metaConsumer = this._reactiveSwitch.createTopicConsumer<unknown>(`${baseTopicName}/meta`, META_PARSERS[fieldValueType])
-      const errorConsumer = this._reactiveSwitch.createTopicConsumer<unknown>(`${baseTopicName}/meta/error`, parseControlMetaError)
+      const metaConsumer = this._reactiveSwitch.createTopicConsumer<unknown>(`${baseTopicName}${TOPIC_SUFFIX_META_READER}`, META_PARSERS[fieldValueType])
+      const errorConsumer = this._reactiveSwitch.createTopicConsumer<unknown>(`${baseTopicName}${TOPIC_SUFFIX_META_ERROR_READER}`, parseControlMetaError)
       Object.assign(collector, {
-        [`${fieldBaseName}Meta$`]: metaConsumer.changes$,
-        [`${fieldBaseName}Error$`]: errorConsumer.changes$,
+        [`${fieldBaseName}${PROPERTY_NAME_SUFFIX_META}${PROPERTY_NAME_SUFFIX_OBSERVABLE}`]: metaConsumer.changes$,
+        [`${fieldBaseName}${PROPERTY_NAME_SUFFIX_ERROR}${PROPERTY_NAME_SUFFIX_OBSERVABLE}`]: errorConsumer.changes$,
       })
       switch (fieldDestiny) {
         // @ts-expect-error cause define write and read will define later
@@ -77,15 +84,15 @@ export class ModbusDeviceFactoryImpl implements ModbusDeviceFactory {
           Object.assign(collector, { set [fieldBaseName](value: unknown) {valueProducer.subscriber.next(value)} })
         // eslint-disable-next-line no-fallthrough
         case FIELD_DESTINY_READ:
-          Object.assign(collector, { [`${fieldBaseName}$`]: valueConsumer.changes$ })
+          Object.assign(collector, { [`${fieldBaseName}${PROPERTY_NAME_SUFFIX_OBSERVABLE}`]: valueConsumer.changes$ })
           break
         case FIELD_DESTINY_ACTION:
           Object.assign(collector, { [fieldBaseName]: () => {valueProducer.subscriber.next('1')} })
       }
       return collector
     }, {
-      meta$: this._reactiveSwitch.createTopicConsumer(`${topicNameResolver(undefined)}/meta`, parseDeviceMeta).changes$,
-      error$: this._reactiveSwitch.createTopicConsumer(`${topicNameResolver(undefined)}/meta/error`, parseDeviceMetaError).changes$,
+      meta$: this._reactiveSwitch.createTopicConsumer(`${topicNameResolver(undefined)}${TOPIC_SUFFIX_META_READER}`, parseDeviceMeta).changes$,
+      error$: this._reactiveSwitch.createTopicConsumer(`${topicNameResolver(undefined)}${TOPIC_SUFFIX_META_ERROR_READER}`, parseDeviceMetaError).changes$,
     } as Record<keyof PhysicalWbDevice<Config>, unknown>) as PhysicalWbDevice<Config>
   }
 
