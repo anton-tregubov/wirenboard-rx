@@ -14,6 +14,9 @@ export class WirenboardDeviceFactoryImpl implements WirenboardDeviceFactory {
   }
 
   createWbMr6c(slave: ModbusSlave): WbMr6cDevice {
-    return this._modbusDeviceFactory.createPhysicalWbDevice(WB_MR6C_CONFIG, suffix => `/${DEVICES_TOPIC_IDENTIFIER}/${WB_MR6C_TOPIC_IDENTIFIER}_${slave}` + (suffix ? `/${CONTROLS_TOPIC_IDENTIFIER}/${suffix}` : ''))
+    return this._modbusDeviceFactory.createPhysicalWbDevice(
+      WB_MR6C_CONFIG,
+      suffix => `/${DEVICES_TOPIC_IDENTIFIER}/${WB_MR6C_TOPIC_IDENTIFIER}_${slave}` + (suffix ? `/${CONTROLS_TOPIC_IDENTIFIER}/${suffix}` : ''),
+    )
   }
 }

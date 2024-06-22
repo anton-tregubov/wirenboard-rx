@@ -1,5 +1,6 @@
 import { Observable } from 'rxjs'
 import { Integer, IntegerRange, Optional } from '@main/core/utils'
+import { TopicName } from '@main/core/topic-events-stream-reactive-switch'
 
 export const FIELD_DESTINY_READ = 'read'
 export const FIELD_DESTINY_READ_AND_WRITE = 'read-and-write'
@@ -118,3 +119,8 @@ export type ModbusSlave = IntegerRange<1, 250/*or less?*/>
 
 export const DEVICES_TOPIC_IDENTIFIER = 'devices'
 export const CONTROLS_TOPIC_IDENTIFIER = 'controls'
+export const SYSTEM_TOPIC_IDENTIFIER = 'wb-rx'
+
+export interface SystemTopic {
+  readonly definedVirtualDevicesTopicNames: TopicName[]
+}
