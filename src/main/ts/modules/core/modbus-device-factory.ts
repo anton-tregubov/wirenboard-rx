@@ -1,5 +1,4 @@
 import {
-  ControlMeta,
   ControlMetaError,
   DeviceMeta,
   DeviceMetaError,
@@ -12,10 +11,12 @@ import {
   PROPERTY_NAME_SUFFIX_META,
   PROPERTY_NAME_SUFFIX_OBSERVABLE,
   SystemTopic,
+  TOPIC_VALUE_ACTION,
   TOPIC_VALUE_COUNTER,
   TOPIC_VALUE_SWITCH,
   TopicsSubscriptionConfig,
-  TopicValueType,
+  TopicValueTypeToControlMetaType,
+  TopicValueTypeToNativeType,
   VirtualWbDevice,
 } from '@main/modules/core/definitions'
 import {
@@ -32,6 +33,15 @@ import { BehaviorSubject } from 'rxjs'
 
 type PartialTopicName<Config extends TopicsSubscriptionConfig> = keyof Config
 type TopicNameResolver<Config extends TopicsSubscriptionConfig> = (suffix: Optional<PartialTopicName<Config>>) => TopicName
+type ValueParsersMapping = {
+  [Property in keyof TopicValueTypeToNativeType]: TopicValueParser<TopicValueTypeToNativeType[Property]>;
+}
+type ValueSerializersMapping = {
+  [Property in keyof TopicValueTypeToNativeType]: TopicValueSerializer<TopicValueTypeToNativeType[Property]>;
+}
+type MetaParsersMapping = {
+  [Property in keyof TopicValueTypeToControlMetaType]: TopicValueParser<TopicValueTypeToControlMetaType[Property]>;
+}
 
 const TOPIC_SUFFIX_VALUE_WRITER = '/on'
 const TOPIC_SUFFIX_META_READER = '/meta'
@@ -40,26 +50,27 @@ const TOPIC_SUFFIX_META_ERROR_READER = '/meta/error'
 const VALUE_PARSERS = {
   [TOPIC_VALUE_SWITCH]: str => Boolean(parseInt(str)),
   [TOPIC_VALUE_COUNTER]: parseInt,
-} satisfies Record<TopicValueType, TopicValueParser<unknown>>
+  [TOPIC_VALUE_ACTION]: () => {throw Error('never')},
+} satisfies ValueParsersMapping
 
 const VALUE_SERIALIZERS = {
-  [TOPIC_VALUE_SWITCH]: val => {
-    switch (val) {
+  [TOPIC_VALUE_SWITCH]: b => {
+    switch (b) {
       case true:
         return '1'
       case false:
         return '0'
-      default:
-        throw new Error(`Boolean expected. But ${val}`)
     }
   },
-  [TOPIC_VALUE_COUNTER]: Number.toString,
-} satisfies Record<TopicValueType, TopicValueSerializer<unknown>>
+  [TOPIC_VALUE_COUNTER]: n => n.toString(),
+  [TOPIC_VALUE_ACTION]: s => s,
+} satisfies ValueSerializersMapping
 
 const META_PARSERS = {
   [TOPIC_VALUE_SWITCH]: JSON.parse,
   [TOPIC_VALUE_COUNTER]: JSON.parse,
-} satisfies Record<TopicValueType, TopicValueParser<ControlMeta>>
+  [TOPIC_VALUE_ACTION]: JSON.parse,
+} satisfies MetaParsersMapping
 
 const PROPERTY_DEFINER = {
   defineSetter: <Value>(collector: Record<PropertyKey, Value>, propertyName: string, valueProducer: TopicProducer<Value>) =>
@@ -109,7 +120,7 @@ export class ModbusDeviceFactoryImpl implements ModbusDeviceFactory {
     return topicNameIdentities.reduce((collector, topicIdentifier) => {
       const baseTopicName = topicNameResolver(topicIdentifier)
       const { fieldBaseName, fieldValueType, fieldDestiny } = config[topicIdentifier]
-      const valueProducer = this._reactiveSwitch.createTopicProducer<unknown>(`${baseTopicName}${TOPIC_SUFFIX_VALUE_WRITER}`, VALUE_SERIALIZERS[fieldValueType])
+      const valueProducer = this._reactiveSwitch.createTopicProducer<unknown>(`${baseTopicName}${TOPIC_SUFFIX_VALUE_WRITER}`, VALUE_SERIALIZERS[fieldValueType] as TopicValueSerializer<unknown>)
       const valueConsumer = this._reactiveSwitch.createTopicConsumer<unknown>(baseTopicName, VALUE_PARSERS[fieldValueType])
       const metaConsumer = this._reactiveSwitch.createTopicConsumer<unknown>(`${baseTopicName}${TOPIC_SUFFIX_META_READER}`, META_PARSERS[fieldValueType])
       const errorConsumer = this._reactiveSwitch.createTopicConsumer<unknown>(`${baseTopicName}${TOPIC_SUFFIX_META_ERROR_READER}`, parseControlMetaError)
@@ -137,7 +148,8 @@ export class ModbusDeviceFactoryImpl implements ModbusDeviceFactory {
       throw new Error('Unique name collision detected')
     }
     this._definedNewVirtualDevicesTopicNames$.next(new Set([...alreadyExistedVirtualDeviceTopics, virtualDeviceId]))
-
+    const topicNameIdentities = propertyKeys(config)
+    console.log('TODO, ' + topicNameIdentities)
     this._reactiveSwitch.createTopicProducer(`${alreadyExistedVirtualDeviceTopics}/meta`, serializeSystemTopic)
     const device = {} as Record<keyof PhysicalWbDevice<Config>, unknown>
     return device as VirtualWbDevice<Config>
@@ -156,9 +168,9 @@ function parseControlMetaError(str: string): ControlMetaError {
   return { value: str }
 }
 
-function parseSystemTopic(str: string): SystemTopic {
-  return JSON.parse(str)
-}
+// function parseSystemTopic(str: string): SystemTopic {
+//   return JSON.parse(str)
+// }
 
 function serializeSystemTopic(topic: SystemTopic): string {
   return JSON.stringify(topic)

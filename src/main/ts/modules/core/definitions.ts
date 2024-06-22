@@ -36,7 +36,11 @@ export interface NumberControlMeta extends BaseControlMeta {
 
 }
 
-export type ControlMeta = BooleanControlMeta | NumberControlMeta
+export interface ButtonControlMeta extends BaseControlMeta {
+
+}
+
+export type ControlMeta = BooleanControlMeta | NumberControlMeta | ButtonControlMeta
 
 export interface ControlMetaError {
 // ??? ask wb
@@ -48,19 +52,23 @@ export interface DeviceMetaError {
 
 export const TOPIC_VALUE_COUNTER = 'counter'
 export const TOPIC_VALUE_SWITCH = 'switch'
+export const TOPIC_VALUE_ACTION = 'never'
 
 export type TopicValueType =
   | typeof TOPIC_VALUE_COUNTER
   | typeof TOPIC_VALUE_SWITCH
+  | typeof TOPIC_VALUE_ACTION
 
-interface TopicValueTypeToNativeType {
+export interface TopicValueTypeToNativeType {
   [TOPIC_VALUE_COUNTER]: Integer
   [TOPIC_VALUE_SWITCH]: boolean
+  [TOPIC_VALUE_ACTION]: never
 }
 
-interface TopicValueTypeToControlMetaType {
+export interface TopicValueTypeToControlMetaType {
   [TOPIC_VALUE_COUNTER]: NumberControlMeta
   [TOPIC_VALUE_SWITCH]: BooleanControlMeta
+  [TOPIC_VALUE_ACTION]: BooleanControlMeta
 }
 
 export interface TopicSubscriptionConfig<Name extends string, Destiny extends FieldDestiny, Type extends TopicValueType> {
