@@ -15,10 +15,10 @@ type WbMirPlayTopicsSubscriptionConfig<Count extends Integer> = {
   readonly [Index in Count as `${typeof TOPIC_PLAY}${Index}`]: PlayTopicSubscriptionConfig<Index>
 }
 
-type WbMirXConfig<Count extends Integer> =
-  WbMirPlayTopicsSubscriptionConfig<Count>
+type WbMirPrototypeConfig<IrCount extends Integer> =
+  WbMirPlayTopicsSubscriptionConfig<IrCount>
 
-type WbMirConfig = WbMirXConfig<IntegerRange<1, 100>>
+type WbMirConfig = WbMirPrototypeConfig<IntegerRange<1, 100>>
 
 export type WbMirDevice = PhysicalWbDevice<WbMirConfig>
 

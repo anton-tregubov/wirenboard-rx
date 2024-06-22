@@ -25,7 +25,7 @@ type PressTypes = typeof PRESS_TYPE_SINGLE | typeof PRESS_TYPE_DOUBLE | typeof P
 
 type RelayTopicSubscriptionConfig<Index extends Integer> = TopicSubscriptionConfig<`${typeof PROPERTY_RELAY}${Index}`, typeof FIELD_DESTINY_READ_AND_WRITE, typeof TOPIC_VALUE_SWITCH>;
 type InputTopicSubscriptionConfig<Index extends Integer> = TopicSubscriptionConfig<`${typeof PROPERTY_INPUT}${Index}`, typeof FIELD_DESTINY_READ, typeof TOPIC_VALUE_SWITCH>;
-type InputPressCountTopicSubscriptionConfig<Index extends Integer, PressType extends string> = TopicSubscriptionConfig<`${typeof PROPERTY_INPUT}${Index}${typeof PROPERTY_PRESS}${PressType}${typeof PROPERTY_COUNTER}`, typeof FIELD_DESTINY_READ, typeof TOPIC_VALUE_COUNTER>;
+type InputPressCountTopicSubscriptionConfig<Index extends Integer, PressType extends PressTypes> = TopicSubscriptionConfig<`${typeof PROPERTY_INPUT}${Index}${typeof PROPERTY_PRESS}${PressType}${typeof PROPERTY_COUNTER}`, typeof FIELD_DESTINY_READ, typeof TOPIC_VALUE_COUNTER>;
 
 type WbMrcRelayTopicsSubscriptionConfig<Count extends Integer> = {
   readonly [Index in Count as `${typeof TOPIC_RELAY}${Index}`]: RelayTopicSubscriptionConfig<Index>
@@ -37,12 +37,12 @@ type WbMrcPressInputCountTopicsSubscriptionConfig<Count extends Integer, PressTy
   readonly [Index in Count as `${typeof TOPIC_INPUT} ${PressType} ${Index} ${typeof TOPIC_COUNTER}`]: InputPressCountTopicSubscriptionConfig<Index, PressType>
 }
 
-type WbMrcConfig<Count extends Integer, PressType extends PressTypes> =
+type WbMrcPrototypeConfig<Count extends Integer, PressType extends PressTypes> =
   WbMrcRelayTopicsSubscriptionConfig<Count>
   & WbMrcInputTopicsSubscriptionConfig<Count>
   & WbMrcPressInputCountTopicsSubscriptionConfig<Count, PressType>
 
-type WbMr6cConfig = WbMrcConfig<IntegerRange<1, 7>, typeof PRESS_TYPE_SINGLE | typeof PRESS_TYPE_DOUBLE | typeof PRESS_TYPE_LONG>
+type WbMr6cConfig = WbMrcPrototypeConfig<IntegerRange<1, 7>, typeof PRESS_TYPE_SINGLE | typeof PRESS_TYPE_DOUBLE | typeof PRESS_TYPE_LONG>
 
 export type WbMr6cDevice = PhysicalWbDevice<WbMr6cConfig>
 

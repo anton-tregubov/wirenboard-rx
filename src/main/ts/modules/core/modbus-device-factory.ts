@@ -12,8 +12,14 @@ import {
   PROPERTY_NAME_SUFFIX_OBSERVABLE,
   SystemTopic,
   TOPIC_VALUE_ACTION,
+  TOPIC_VALUE_CO2,
   TOPIC_VALUE_COUNTER,
+  TOPIC_VALUE_HUMIDITY,
+  TOPIC_VALUE_ILLUMINANCE,
+  TOPIC_VALUE_MOTION,
+  TOPIC_VALUE_SOUND_LEVEL,
   TOPIC_VALUE_SWITCH,
+  TOPIC_VALUE_TEMPERATURE,
   TopicsSubscriptionConfig,
   TopicValueTypeToControlMetaType,
   TopicValueTypeToNativeType,
@@ -51,6 +57,12 @@ const VALUE_PARSERS = {
   [TOPIC_VALUE_SWITCH]: str => Boolean(parseInt(str)),
   [TOPIC_VALUE_COUNTER]: parseInt,
   [TOPIC_VALUE_ACTION]: () => {throw Error('never')},
+  [TOPIC_VALUE_TEMPERATURE]: parseFloat,
+  [TOPIC_VALUE_HUMIDITY]: parseFloat,
+  [TOPIC_VALUE_CO2]: parseInt,
+  [TOPIC_VALUE_SOUND_LEVEL]: parseFloat,
+  [TOPIC_VALUE_ILLUMINANCE]: parseFloat,
+  [TOPIC_VALUE_MOTION]: parseInt,
 } satisfies ValueParsersMapping
 
 const VALUE_SERIALIZERS = {
@@ -64,12 +76,24 @@ const VALUE_SERIALIZERS = {
   },
   [TOPIC_VALUE_COUNTER]: n => n.toString(),
   [TOPIC_VALUE_ACTION]: s => s,
+  [TOPIC_VALUE_TEMPERATURE]: n => n.toFixed(2),
+  [TOPIC_VALUE_HUMIDITY]: n => n.toFixed(2),
+  [TOPIC_VALUE_CO2]: n => n.toString(),
+  [TOPIC_VALUE_SOUND_LEVEL]: n => n.toFixed(2),
+  [TOPIC_VALUE_ILLUMINANCE]: n => n.toFixed(2),
+  [TOPIC_VALUE_MOTION]: n => n.toString(),
 } satisfies ValueSerializersMapping
 
 const META_PARSERS = {
   [TOPIC_VALUE_SWITCH]: JSON.parse,
   [TOPIC_VALUE_COUNTER]: JSON.parse,
   [TOPIC_VALUE_ACTION]: JSON.parse,
+  [TOPIC_VALUE_TEMPERATURE]: JSON.parse,
+  [TOPIC_VALUE_HUMIDITY]: JSON.parse,
+  [TOPIC_VALUE_CO2]: JSON.parse,
+  [TOPIC_VALUE_SOUND_LEVEL]: JSON.parse,
+  [TOPIC_VALUE_ILLUMINANCE]: JSON.parse,
+  [TOPIC_VALUE_MOTION]: JSON.parse,
 } satisfies MetaParsersMapping
 
 const PROPERTY_DEFINER = {

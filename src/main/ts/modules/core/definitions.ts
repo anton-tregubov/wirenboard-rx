@@ -51,6 +51,12 @@ export interface DeviceMetaError {
 }
 
 export const TOPIC_VALUE_COUNTER = 'counter'
+export const TOPIC_VALUE_TEMPERATURE = 'temperature'
+export const TOPIC_VALUE_HUMIDITY = 'humidity'
+export const TOPIC_VALUE_CO2 = 'co2'
+export const TOPIC_VALUE_SOUND_LEVEL = 'soundLevel'
+export const TOPIC_VALUE_ILLUMINANCE = 'illuminance'
+export const TOPIC_VALUE_MOTION = 'motion'
 export const TOPIC_VALUE_SWITCH = 'switch'
 export const TOPIC_VALUE_ACTION = 'never'
 
@@ -58,17 +64,35 @@ export type TopicValueType =
   | typeof TOPIC_VALUE_COUNTER
   | typeof TOPIC_VALUE_SWITCH
   | typeof TOPIC_VALUE_ACTION
+  | typeof TOPIC_VALUE_TEMPERATURE
+  | typeof TOPIC_VALUE_HUMIDITY
+  | typeof TOPIC_VALUE_CO2
+  | typeof TOPIC_VALUE_SOUND_LEVEL
+  | typeof TOPIC_VALUE_ILLUMINANCE
+  | typeof TOPIC_VALUE_MOTION
 
 export interface TopicValueTypeToNativeType {
   [TOPIC_VALUE_COUNTER]: Integer
   [TOPIC_VALUE_SWITCH]: boolean
   [TOPIC_VALUE_ACTION]: never
+  [TOPIC_VALUE_TEMPERATURE]: number
+  [TOPIC_VALUE_HUMIDITY]: number
+  [TOPIC_VALUE_CO2]: Integer
+  [TOPIC_VALUE_SOUND_LEVEL]: number
+  [TOPIC_VALUE_ILLUMINANCE]: number
+  [TOPIC_VALUE_MOTION]: Integer
 }
 
 export interface TopicValueTypeToControlMetaType {
   [TOPIC_VALUE_COUNTER]: NumberControlMeta
   [TOPIC_VALUE_SWITCH]: BooleanControlMeta
-  [TOPIC_VALUE_ACTION]: BooleanControlMeta
+  [TOPIC_VALUE_ACTION]: ButtonControlMeta
+  [TOPIC_VALUE_TEMPERATURE]: NumberControlMeta
+  [TOPIC_VALUE_HUMIDITY]: NumberControlMeta
+  [TOPIC_VALUE_CO2]: NumberControlMeta
+  [TOPIC_VALUE_SOUND_LEVEL]: NumberControlMeta
+  [TOPIC_VALUE_ILLUMINANCE]: NumberControlMeta
+  [TOPIC_VALUE_MOTION]: NumberControlMeta
 }
 
 export interface TopicSubscriptionConfig<Name extends string, Destiny extends FieldDestiny, Type extends TopicValueType> {
