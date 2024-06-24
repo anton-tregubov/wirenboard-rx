@@ -42,7 +42,10 @@ type WbMrcPrototypeConfig<Count extends Integer, PressType extends PressTypes> =
   & WbMrcInputTopicsSubscriptionConfig<Count>
   & WbMrcPressInputCountTopicsSubscriptionConfig<Count, PressType>
 
-type WbMr6cConfig = WbMrcPrototypeConfig<IntegerRange<1, 7>, typeof PRESS_TYPE_SINGLE | typeof PRESS_TYPE_DOUBLE | typeof PRESS_TYPE_LONG>
+const MR6C_FIRST_CHANNEL_INCLUSIVE = 1
+const MR6C_LAST_CHANNEL_EXCLUSIVE = 7
+
+type WbMr6cConfig = WbMrcPrototypeConfig<IntegerRange<typeof MR6C_FIRST_CHANNEL_INCLUSIVE, typeof MR6C_LAST_CHANNEL_EXCLUSIVE>, typeof PRESS_TYPE_SINGLE | typeof PRESS_TYPE_DOUBLE | typeof PRESS_TYPE_LONG>
 
 export type WbMr6cDevice = PhysicalWbDevice<WbMr6cConfig>
 
@@ -93,9 +96,9 @@ function inputPressCountsTopicSubscriptionConfig<F extends Integer, T extends In
 }
 
 export const WB_MR6C_CONFIG: WbMr6cConfig = {
-  ...relaysTopicSubscriptionConfig(1, 7),
-  ...inputsTopicSubscriptionConfig(1, 7),
-  ...inputPressCountsTopicSubscriptionConfig(1, 7, [PRESS_TYPE_SINGLE, PRESS_TYPE_DOUBLE, PRESS_TYPE_LONG]),
+  ...relaysTopicSubscriptionConfig(MR6C_FIRST_CHANNEL_INCLUSIVE, MR6C_LAST_CHANNEL_EXCLUSIVE),
+  ...inputsTopicSubscriptionConfig(MR6C_FIRST_CHANNEL_INCLUSIVE, MR6C_LAST_CHANNEL_EXCLUSIVE),
+  ...inputPressCountsTopicSubscriptionConfig(MR6C_FIRST_CHANNEL_INCLUSIVE, MR6C_LAST_CHANNEL_EXCLUSIVE, [PRESS_TYPE_SINGLE, PRESS_TYPE_DOUBLE, PRESS_TYPE_LONG]),
 
 }
 

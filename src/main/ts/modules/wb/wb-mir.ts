@@ -9,6 +9,9 @@ import {
 const TOPIC_PLAY = 'Play from ROM'
 const PROPERTY_PLAY = 'play'
 
+const MIR_LAST_ROM_EXCLUSIVE = 100
+const MIR_FIRST_ROM_INCLUSIVE = 1
+
 type PlayTopicSubscriptionConfig<Index extends Integer> = TopicSubscriptionConfig<`${typeof PROPERTY_PLAY}${Index}`, typeof FIELD_DESTINY_ACTION, typeof TOPIC_VALUE_ACTION>;
 
 type WbMirPlayTopicsSubscriptionConfig<Count extends Integer> = {
@@ -18,7 +21,7 @@ type WbMirPlayTopicsSubscriptionConfig<Count extends Integer> = {
 type WbMirPrototypeConfig<IrCount extends Integer> =
   WbMirPlayTopicsSubscriptionConfig<IrCount>
 
-type WbMirConfig = WbMirPrototypeConfig<IntegerRange<1, 100>>
+type WbMirConfig = WbMirPrototypeConfig<IntegerRange<typeof MIR_FIRST_ROM_INCLUSIVE, typeof MIR_LAST_ROM_EXCLUSIVE>>
 
 export type WbMirDevice = PhysicalWbDevice<WbMirConfig>
 
@@ -38,7 +41,7 @@ function playsTopicSubscriptionConfig<F extends Integer, T extends Integer, Inde
 }
 
 export const WB_MIR_CONFIG: WbMirConfig = {
-  ...playsTopicSubscriptionConfig(1, 100),
+  ...playsTopicSubscriptionConfig(MIR_FIRST_ROM_INCLUSIVE, MIR_LAST_ROM_EXCLUSIVE),
 }
 
 export const WB_MIR_TOPIC_IDENTIFIER = 'wb-mir_v2'

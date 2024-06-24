@@ -93,7 +93,10 @@ type WbMswPrototypeConfig<MotionTypes extends MotionType, LedTypes extends LedTy
   & WbMswLedTopicsSubscriptionConfig<LedTypes>
   & WbMswPlayTopicsSubscriptionConfig<IrCount>
 
-type WbMswConfig = WbMswPrototypeConfig<typeof MOTION_TYPE_CURRENT | typeof MOTION_TYPE_MAX, typeof LED_TYPE_GREEN | typeof LED_TYPE_RED, IntegerRange<1, 100>>
+const MSW_LAST_ROM_EXCLUSIVE = 100
+const MSW_FIRST_ROM_INCLUSIVE = 1
+
+type WbMswConfig = WbMswPrototypeConfig<typeof MOTION_TYPE_CURRENT | typeof MOTION_TYPE_MAX, typeof LED_TYPE_GREEN | typeof LED_TYPE_RED, IntegerRange<typeof MSW_FIRST_ROM_INCLUSIVE, typeof MSW_LAST_ROM_EXCLUSIVE>>
 
 export type WbMswDevice = PhysicalWbDevice<WbMswConfig>
 
@@ -199,7 +202,7 @@ export const WB_MSW_CONFIG: WbMswConfig = {
   ...motionsTopicSubscriptionConfig([MOTION_TYPE_CURRENT, MOTION_TYPE_MAX]),
   [TOPIC_BUZZER]: buzzerTopicSubscriptionConfig(),
   ...ledsTopicSubscriptionConfig([LED_TYPE_RED, LED_TYPE_GREEN]),
-  ...playsTopicSubscriptionConfig(1, 100),
+  ...playsTopicSubscriptionConfig(MSW_FIRST_ROM_INCLUSIVE, MSW_LAST_ROM_EXCLUSIVE),
 }
 
 export const WB_MSW_TOPIC_IDENTIFIER = 'wb-msw-v3'

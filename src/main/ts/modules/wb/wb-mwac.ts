@@ -46,7 +46,12 @@ type WbMWacPrototypeConfig<Types extends InputTypes, RelayCount extends Integer,
   & WbMWacInputCountTopicsSubscriptionConfig<Types, InputCount>
   & WbMWacAlarmTopicsSubscriptionConfig
 
-type WbMWacConfig = WbMWacPrototypeConfig<typeof INPUT_TYPE_S | typeof INPUT_TYPE_F, IntegerRange<1, 3>, IntegerRange<1, 4>>
+const MWAC_FIRST_RELAY_INCLUSIVE = 1
+const MWAC_LAST_RELAY_EXCLUSIVE = 3
+const MWAC_FIRST_INPUT_INCLUSIVE = 1
+const MWAC_LAST_INPUT_EXCLUSIVE = 4
+
+type WbMWacConfig = WbMWacPrototypeConfig<typeof INPUT_TYPE_S | typeof INPUT_TYPE_F, IntegerRange<typeof MWAC_FIRST_RELAY_INCLUSIVE, typeof MWAC_LAST_RELAY_EXCLUSIVE>, IntegerRange<typeof MWAC_FIRST_INPUT_INCLUSIVE, typeof MWAC_LAST_INPUT_EXCLUSIVE>>
 
 export type WbMWacDevice = PhysicalWbDevice<WbMWacConfig>
 
@@ -106,9 +111,9 @@ function inputCountersTopicSubscriptionConfig<Type extends InputTypes, F extends
 }
 
 export const WB_MWAC_CONFIG: WbMWacConfig = {
-  ...relaysTopicSubscriptionConfig(1, 3),
-  ...inputsTopicSubscriptionConfig([INPUT_TYPE_S, INPUT_TYPE_F], 1, 4),
-  ...inputCountersTopicSubscriptionConfig([INPUT_TYPE_S, INPUT_TYPE_F], 1, 4),
+  ...relaysTopicSubscriptionConfig(MWAC_FIRST_RELAY_INCLUSIVE, MWAC_LAST_RELAY_EXCLUSIVE),
+  ...inputsTopicSubscriptionConfig([INPUT_TYPE_S, INPUT_TYPE_F], MWAC_FIRST_INPUT_INCLUSIVE, MWAC_LAST_INPUT_EXCLUSIVE),
+  ...inputCountersTopicSubscriptionConfig([INPUT_TYPE_S, INPUT_TYPE_F], MWAC_FIRST_INPUT_INCLUSIVE, MWAC_LAST_INPUT_EXCLUSIVE),
   [TOPIC_ALARM]: alarmTopicSubscriptionConfig(),
 
 }
