@@ -148,6 +148,7 @@ export type VirtualWbDevice<Config extends TopicsSubscriptionConfig<typeof FIELD
   PhysicalWbDevice<Config> & WbDeviceMetaWriterProperties
 
 export type ModbusSlave = IntegerRange<1, 250/*or less?*/>
+export type GpioDeviceIndex = IntegerRange<1, 8>
 
 export const DEVICES_TOPIC_IDENTIFIER = 'devices'
 export const CONTROLS_TOPIC_IDENTIFIER = 'controls'
