@@ -27,6 +27,7 @@
     "rimraf": "~5.0",
     "ts-jest": "~29.1",
     "ts-node": "~10.1",
+    "ts-arithmetic": "^0.1.1",
     "typescript": "~5.4",
     "rollup": "^4.14",
     "@rollup/plugin-typescript": "~11.1",

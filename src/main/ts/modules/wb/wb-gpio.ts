@@ -1,4 +1,4 @@
-import { Integer, IntegerRange, range } from '@main/core/utils'
+import { Integer, IntegerRange, range, Union } from '@main/core/utils'
 import {
   FIELD_DESTINY_READ,
   FIELD_DESTINY_READ_AND_WRITE,
@@ -6,6 +6,7 @@ import {
   TOPIC_VALUE_SWITCH,
   TopicSubscriptionConfig,
 } from '@main/modules/core/definitions'
+import { Add } from 'ts-arithmetic'
 
 const EXT_PREFIX = 'EXT'
 const DI_WD_IN_SENSOR = 'IN'
@@ -21,7 +22,8 @@ const DI_WD_14_FIRST_SENSOR_INCLUSIVE = 1
 const DO_R10A_8_LAST_SENSOR_EXCLUSIVE = 9
 const DO_R10A_8_FIRST_SENSOR_INCLUSIVE = 1
 
-type ModuleIndex = IntegerRange<1, 9>
+// type ModuleIndex = IntegerRange<1, 9>
+type ModuleIndex = Integer
 
 type ModuleDiWdInTopicSubscriptionConfig<Index extends ModuleIndex, Port extends Integer> = TopicSubscriptionConfig<`${typeof PROPERTY_MODULE}${Index}${typeof PROPERTY_DI_WD_IN}${Port}`, typeof FIELD_DESTINY_READ, typeof TOPIC_VALUE_SWITCH>;
 type ModuleDoR10AOutTopicSubscriptionConfig<Index extends ModuleIndex, Port extends Integer> = TopicSubscriptionConfig<`${typeof PROPERTY_MODULE}${Index}${typeof PROPERTY_DO_R10A_OUT}${Port}`, typeof FIELD_DESTINY_READ_AND_WRITE, typeof TOPIC_VALUE_SWITCH>;
@@ -44,26 +46,9 @@ type WbGpioModuleConfigs<Index extends ModuleIndex> =
 
 type EmptyModuleConfig = NonNullable<unknown>
 
-type OrEmptyConfig<T> = T extends never ? EmptyModuleConfig : T
+// type OrEmptyConfig<T> = T extends never ? EmptyModuleConfig : T
 
-export type WbGpioConfig<
-  Module1 extends WbGpioModuleConfigs<1>,
-  Module2 extends WbGpioModuleConfigs<2>,
-  Module3 extends WbGpioModuleConfigs<3>,
-  Module4 extends WbGpioModuleConfigs<4>,
-  Module5 extends WbGpioModuleConfigs<5>,
-  Module6 extends WbGpioModuleConfigs<6>,
-  Module7 extends WbGpioModuleConfigs<7>,
-  Module8 extends WbGpioModuleConfigs<8>,
-> = EmptyModuleConfig
-  & OrEmptyConfig<Module1>
-  & OrEmptyConfig<Module2>
-  & OrEmptyConfig<Module3>
-  & OrEmptyConfig<Module4>
-  & OrEmptyConfig<Module5>
-  & OrEmptyConfig<Module6>
-  & OrEmptyConfig<Module7>
-  & OrEmptyConfig<Module8>
+export type WbGpioConfig<Modules extends readonly WbGpioModuleConfigs<ModuleIndex>[]> = Union<Modules, EmptyModuleConfig>
 
 function moduleDiWdInTopicSubscriptionConfig<Index extends ModuleIndex, Port extends Integer>(index: Index, port: Port): ModuleDiWdInTopicSubscriptionConfig<Index, Port> {
   return {
@@ -107,49 +92,11 @@ type ModuleToConfigMapper<Index extends ModuleIndex> = {
   [GPIO_MODULE_NOT_EXISTS]: EmptyModuleConfig
 }
 
-export type WbGpioDevice<
-  Module1 extends WbGpioModule,
-  Module2 extends WbGpioModule,
-  Module3 extends WbGpioModule,
-  Module4 extends WbGpioModule,
-  Module5 extends WbGpioModule,
-  Module6 extends WbGpioModule,
-  Module7 extends WbGpioModule,
-  Module8 extends WbGpioModule,
-> = PhysicalWbDevice<
-  WbGpioConfig<
-    ModuleToConfigMapper<1>[Module1],
-    ModuleToConfigMapper<2>[Module2],
-    ModuleToConfigMapper<3>[Module3],
-    ModuleToConfigMapper<4>[Module4],
-    ModuleToConfigMapper<5>[Module5],
-    ModuleToConfigMapper<6>[Module6],
-    ModuleToConfigMapper<7>[Module7],
-    ModuleToConfigMapper<8>[Module8]
-  >
->
+type WbGpioModuleConfigsArray<Modules extends readonly WbGpioModule[], Acc extends WbGpioModuleConfigs<ModuleIndex>[] = []> = Modules extends [infer Head extends WbGpioModule, ...infer Tail extends WbGpioModule[]] ? WbGpioModuleConfigsArray<Tail, [...Acc, ModuleToConfigMapper<Add<Acc['length'], 1>>[Head]]> : Acc
 
-export function wbGpioConfig<
-  Modules extends [
-    WbGpioModule,
-    WbGpioModule,
-    WbGpioModule,
-    WbGpioModule,
-    WbGpioModule,
-    WbGpioModule,
-    WbGpioModule,
-    WbGpioModule
-  ]
->(modules: Modules): WbGpioConfig<
-  ModuleToConfigMapper<1>[typeof modules[0]],
-  ModuleToConfigMapper<2>[typeof modules[1]],
-  ModuleToConfigMapper<3>[typeof modules[2]],
-  ModuleToConfigMapper<4>[typeof modules[3]],
-  ModuleToConfigMapper<5>[typeof modules[4]],
-  ModuleToConfigMapper<6>[typeof modules[5]],
-  ModuleToConfigMapper<7>[typeof modules[6]],
-  ModuleToConfigMapper<8>[typeof modules[7]]
-> {
+export type WbGpioDevice<Modules extends readonly WbGpioModule[]> = PhysicalWbDevice<WbGpioConfig<WbGpioModuleConfigsArray<Modules>>>
+
+export function wbGpioConfig<Modules extends readonly WbGpioModule[]>(modules: Modules): WbGpioConfig<WbGpioModuleConfigsArray<Modules>> {
   return modules.reduce((collector, module, index) => {
     const moduleIndex = (index + 1) as ModuleIndex
     switch (module) {
@@ -159,8 +106,7 @@ export function wbGpioConfig<
         return Object.assign(collector, moduleDoR10AOutsTopicSubscriptionConfig(moduleIndex, DO_R10A_8_FIRST_SENSOR_INCLUSIVE, DO_R10A_8_LAST_SENSOR_EXCLUSIVE))
     }
     return collector
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }, {} as WbGpioConfig<any, any, any, any, any, any, any, any>)
+  }, {} as WbGpioConfig<WbGpioModuleConfigsArray<Modules>>)
 }
 
 export const WB_GPIO_TOPIC_IDENTIFIER = 'wb-gpio'

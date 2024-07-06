@@ -7,13 +7,7 @@ import { WB_MWAC_CONFIG, WB_MWAC_TOPIC_IDENTIFIER, WbMWacDevice } from '@main/mo
 import { WB_M1W2_CONFIG, WB_M1W2_TOPIC_IDENTIFIER, WbM1W2Device } from '@main/modules/wb/wb-mw'
 import { TopicName } from '@main/core/topic-events-stream-reactive-switch'
 import { Optional } from '@main/core/utils'
-import {
-  GPIO_MODULE_NOT_EXISTS,
-  WB_GPIO_TOPIC_IDENTIFIER,
-  wbGpioConfig,
-  WbGpioDevice,
-  WbGpioModule,
-} from '@main/modules/wb/wb-gpio'
+import { WB_GPIO_TOPIC_IDENTIFIER, wbGpioConfig, WbGpioDevice, WbGpioModule } from '@main/modules/wb/wb-gpio'
 
 export interface WirenboardDeviceFactory {
   createWbMr6c(slave: ModbusSlave): WbMr6cDevice
@@ -26,137 +20,7 @@ export interface WirenboardDeviceFactory {
 
   createWbM1W2(slave: ModbusSlave): WbM1W2Device
 
-  createWbGpio<
-    M1 extends WbGpioModule
-  >(m1: M1): WbGpioDevice<
-    M1,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS
-  >
-
-  createWbGpio<
-    M1 extends WbGpioModule,
-    M2 extends WbGpioModule
-  >(m1: M1, m2: M2): WbGpioDevice<
-    M1,
-    M2,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS
-  >
-
-  createWbGpio<
-    M1 extends WbGpioModule,
-    M2 extends WbGpioModule,
-    M3 extends WbGpioModule
-  >(m1: M1, m2: M2, m3: M3): WbGpioDevice<
-    M1,
-    M2,
-    M3,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS
-  >
-
-  createWbGpio<
-    M1 extends WbGpioModule,
-    M2 extends WbGpioModule,
-    M3 extends WbGpioModule,
-    M4 extends WbGpioModule
-  >(m1: M1, m2: M2, m3: M3, m4: M4): WbGpioDevice<
-    M1,
-    M2,
-    M3,
-    M4,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS
-  >
-
-  createWbGpio<
-    M1 extends WbGpioModule,
-    M2 extends WbGpioModule,
-    M3 extends WbGpioModule,
-    M4 extends WbGpioModule,
-    M5 extends WbGpioModule
-  >(m1: M1, m2: M2, m3: M3, m4: M4, m5: M5): WbGpioDevice<
-    M1,
-    M2,
-    M3,
-    M4,
-    M5,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS
-  >
-
-  createWbGpio<
-    M1 extends WbGpioModule,
-    M2 extends WbGpioModule,
-    M3 extends WbGpioModule,
-    M4 extends WbGpioModule,
-    M5 extends WbGpioModule,
-    M6 extends WbGpioModule
-  >(m1: M1, m2: M2, m3: M3, m4: M4, m5: M5, m6: M6): WbGpioDevice<
-    M1,
-    M2,
-    M3,
-    M4,
-    M5,
-    M6,
-    typeof GPIO_MODULE_NOT_EXISTS,
-    typeof GPIO_MODULE_NOT_EXISTS
-  >
-
-  createWbGpio<
-    M1 extends WbGpioModule,
-    M2 extends WbGpioModule,
-    M3 extends WbGpioModule,
-    M4 extends WbGpioModule,
-    M5 extends WbGpioModule,
-    M6 extends WbGpioModule,
-    M7 extends WbGpioModule
-  >(m1: M1, m2: M2, m3: M3, m4: M4, m5: M5, m6: M6, m7: M7): WbGpioDevice<
-    M1,
-    M2,
-    M3,
-    M4,
-    M5,
-    M6,
-    M7,
-    typeof GPIO_MODULE_NOT_EXISTS
-  >
-
-  // createWbGpio<
-  //   M1 extends WbGpioModule,
-  //   M2 extends WbGpioModule,
-  //   M3 extends WbGpioModule,
-  //   M4 extends WbGpioModule,
-  //   M5 extends WbGpioModule,
-  //   M6 extends WbGpioModule,
-  //   M7 extends WbGpioModule,
-  //   M8 extends WbGpioModule
-  // >(m1: M1, m2: M2, m3: M3, m4: M4, m5: M5, m6: M6, m7: M7, m8: M8): WbGpioDevice<
-  //   M1,
-  //   M2,
-  //   M3,
-  //   M4,
-  //   M5,
-  //   M6,
-  //   M7,
-  //   M8
-  // >
+  createWbGpio<Modules extends readonly WbGpioModule[]>(...modules: [...Modules]): WbGpioDevice<Modules>
 }
 
 export class WirenboardDeviceFactoryImpl implements WirenboardDeviceFactory {
@@ -169,10 +33,6 @@ export class WirenboardDeviceFactoryImpl implements WirenboardDeviceFactory {
   private creteModbusTopicSuffixResolver(identifier: string, slave: ModbusSlave): (suffix: Optional<string>) => TopicName {
     return suffix => `/${DEVICES_TOPIC_IDENTIFIER}/${identifier}_${slave}` + (suffix ? `/${CONTROLS_TOPIC_IDENTIFIER}/${suffix}` : '')
   }
-
-  // private creteGpioTopicSuffixResolver(index: GpioDeviceIndex): (suffix: Optional<string>) => TopicName {
-  //   return suffix => `/${DEVICES_TOPIC_IDENTIFIER}/${WB_GPIO_TOPIC_IDENTIFIER}` + (suffix ? `/${CONTROLS_TOPIC_IDENTIFIER}/${EXT_PREFIX}${index}_${suffix}` : '')
-  // }
 
   createWbMr6c(slave: ModbusSlave): WbMr6cDevice {
     return this._modbusDeviceFactory.createPhysicalWbDevice(WB_MR6C_CONFIG, this.creteModbusTopicSuffixResolver(WB_MR6C_TOPIC_IDENTIFIER, slave))
@@ -194,14 +54,14 @@ export class WirenboardDeviceFactoryImpl implements WirenboardDeviceFactory {
     return this._modbusDeviceFactory.createPhysicalWbDevice(WB_M1W2_CONFIG, this.creteModbusTopicSuffixResolver(WB_M1W2_TOPIC_IDENTIFIER, slave))
   }
 
-  createWbGpio<M1 extends WbGpioModule>(m1: M1): WbGpioDevice<M1, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS>
-  createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule>(m1: M1, m2: M2): WbGpioDevice<M1, M2, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS>
-  createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule, M3 extends WbGpioModule>(m1: M1, m2: M2, m3: M3): WbGpioDevice<M1, M2, M3, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS>
-  createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule, M3 extends WbGpioModule, M4 extends WbGpioModule>(m1: M1, m2: M2, m3: M3, m4: M4): WbGpioDevice<M1, M2, M3, M4, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS>
-  createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule, M3 extends WbGpioModule, M4 extends WbGpioModule, M5 extends WbGpioModule>(m1: M1, m2: M2, m3: M3, m4: M4, m5: M5): WbGpioDevice<M1, M2, M3, M4, M5, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS>
-  createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule, M3 extends WbGpioModule, M4 extends WbGpioModule, M5 extends WbGpioModule, M6 extends WbGpioModule>(m1: M1, m2: M2, m3: M3, m4: M4, m5: M5, m6: M6): WbGpioDevice<M1, M2, M3, M4, M5, M6, typeof GPIO_MODULE_NOT_EXISTS, typeof GPIO_MODULE_NOT_EXISTS>
-  createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule, M3 extends WbGpioModule, M4 extends WbGpioModule, M5 extends WbGpioModule, M6 extends WbGpioModule, M7 extends WbGpioModule>(m1: M1, m2: M2, m3: M3, m4: M4, m5: M5, m6: M6, m7: M7): WbGpioDevice<M1, M2, M3, M4, M5, M6, M7, typeof GPIO_MODULE_NOT_EXISTS>
-  // createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule, M3 extends WbGpioModule, M4 extends WbGpioModule, M5 extends WbGpioModule, M6 extends WbGpioModule, M7 extends WbGpioModule, M8 extends WbGpioModule>(m1: M1, m2: M2, m3: M3, m4: M4, m5: M5, m6: M6, m7: M7, m8: M8): WbGpioDevice<M1, M2, M3, M4, M5, M6, M7, M8>
+  createWbGpio<M1 extends WbGpioModule>(m1: M1): WbGpioDevice<[M1]>
+  createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule>(m1: M1, m2: M2): WbGpioDevice<[M1, M2]>
+  createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule, M3 extends WbGpioModule>(m1: M1, m2: M2, m3: M3): WbGpioDevice<[M1, M2, M3]>
+  createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule, M3 extends WbGpioModule, M4 extends WbGpioModule>(m1: M1, m2: M2, m3: M3, m4: M4): WbGpioDevice<[M1, M2, M3, M4]>
+  createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule, M3 extends WbGpioModule, M4 extends WbGpioModule, M5 extends WbGpioModule>(m1: M1, m2: M2, m3: M3, m4: M4, m5: M5): WbGpioDevice<[M1, M2, M3, M4, M5]>
+  createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule, M3 extends WbGpioModule, M4 extends WbGpioModule, M5 extends WbGpioModule, M6 extends WbGpioModule>(m1: M1, m2: M2, m3: M3, m4: M4, m5: M5, m6: M6): WbGpioDevice<[M1, M2, M3, M4, M5, M6]>
+  createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule, M3 extends WbGpioModule, M4 extends WbGpioModule, M5 extends WbGpioModule, M6 extends WbGpioModule, M7 extends WbGpioModule>(m1: M1, m2: M2, m3: M3, m4: M4, m5: M5, m6: M6, m7: M7): WbGpioDevice<[M1, M2, M3, M4, M5, M6, M7]>
+  createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule, M3 extends WbGpioModule, M4 extends WbGpioModule, M5 extends WbGpioModule, M6 extends WbGpioModule, M7 extends WbGpioModule, M8 extends WbGpioModule>(m1: M1, m2: M2, m3: M3, m4: M4, m5: M5, m6: M6, m7: M7, m8: M8): WbGpioDevice<[M1, M2, M3, M4, M5, M6, M7, M8]>
   // createWbGpio(m1: WbGpioModule, m2?: WbGpioModule, m3?: WbGpioModule, m4?: WbGpioModule, m5?: WbGpioModule, m6?: WbGpioModule, m7?: WbGpioModule, m8?: WbGpioModule): WbGpioDevice<WbGpioModule, WbGpioModule, WbGpioModule, WbGpioModule, WbGpioModule, WbGpioModule, WbGpioModule, WbGpioModule> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   createWbGpio(m1: any, m2?: any, m3?: any, m4?: any, m5?: any, m6?: any, m7?: any, m8?: any): any {

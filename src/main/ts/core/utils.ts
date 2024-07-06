@@ -8,6 +8,8 @@ type IntegerEnumerate<N extends Integer, Acc extends Integer[] = []> = Acc['leng
 
 export type IntegerRange<F extends number, T extends number> = Exclude<IntegerEnumerate<T>, IntegerEnumerate<F>>
 
+export type Union<Types extends readonly unknown[], Acc = object> = Types extends [infer Head, ...infer Tail] ? Union<Tail, Acc & Head> : Acc
+
 export function isDefine<T>(t: Optional<T>): t is T {
   return t !== null && t !== undefined
 }
