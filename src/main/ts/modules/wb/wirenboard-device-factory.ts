@@ -6,7 +6,7 @@ import { WB_MSW_CONFIG, WB_MSW_TOPIC_IDENTIFIER, WbMswDevice } from '@main/modul
 import { WB_MWAC_CONFIG, WB_MWAC_TOPIC_IDENTIFIER, WbMWacDevice } from '@main/modules/wb/wb-mwac'
 import { WB_M1W2_CONFIG, WB_M1W2_TOPIC_IDENTIFIER, WbM1W2Device } from '@main/modules/wb/wb-mw'
 import { TopicName } from '@main/core/topic-events-stream-reactive-switch'
-import { Optional } from '@main/core/utils'
+import { NonNullArray, Optional } from '@main/core/utils'
 import { WB_GPIO_TOPIC_IDENTIFIER, wbGpioConfig, WbGpioDevice, WbGpioModule } from '@main/modules/wb/wb-gpio'
 
 export interface WirenboardDeviceFactory {
@@ -54,6 +54,8 @@ export class WirenboardDeviceFactoryImpl implements WirenboardDeviceFactory {
     return this._modbusDeviceFactory.createPhysicalWbDevice(WB_M1W2_CONFIG, this.creteModbusTopicSuffixResolver(WB_M1W2_TOPIC_IDENTIFIER, slave))
   }
 
+  //eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
   createWbGpio<M1 extends WbGpioModule>(m1: M1): WbGpioDevice<[M1]>
   createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule>(m1: M1, m2: M2): WbGpioDevice<[M1, M2]>
   createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule, M3 extends WbGpioModule>(m1: M1, m2: M2, m3: M3): WbGpioDevice<[M1, M2, M3]>
@@ -62,9 +64,7 @@ export class WirenboardDeviceFactoryImpl implements WirenboardDeviceFactory {
   createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule, M3 extends WbGpioModule, M4 extends WbGpioModule, M5 extends WbGpioModule, M6 extends WbGpioModule>(m1: M1, m2: M2, m3: M3, m4: M4, m5: M5, m6: M6): WbGpioDevice<[M1, M2, M3, M4, M5, M6]>
   createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule, M3 extends WbGpioModule, M4 extends WbGpioModule, M5 extends WbGpioModule, M6 extends WbGpioModule, M7 extends WbGpioModule>(m1: M1, m2: M2, m3: M3, m4: M4, m5: M5, m6: M6, m7: M7): WbGpioDevice<[M1, M2, M3, M4, M5, M6, M7]>
   createWbGpio<M1 extends WbGpioModule, M2 extends WbGpioModule, M3 extends WbGpioModule, M4 extends WbGpioModule, M5 extends WbGpioModule, M6 extends WbGpioModule, M7 extends WbGpioModule, M8 extends WbGpioModule>(m1: M1, m2: M2, m3: M3, m4: M4, m5: M5, m6: M6, m7: M7, m8: M8): WbGpioDevice<[M1, M2, M3, M4, M5, M6, M7, M8]>
-  // createWbGpio(m1: WbGpioModule, m2?: WbGpioModule, m3?: WbGpioModule, m4?: WbGpioModule, m5?: WbGpioModule, m6?: WbGpioModule, m7?: WbGpioModule, m8?: WbGpioModule): WbGpioDevice<WbGpioModule, WbGpioModule, WbGpioModule, WbGpioModule, WbGpioModule, WbGpioModule, WbGpioModule, WbGpioModule> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  createWbGpio(m1: any, m2?: any, m3?: any, m4?: any, m5?: any, m6?: any, m7?: any, m8?: any): any {
+  createWbGpio(m1: WbGpioModule, m2?: WbGpioModule, m3?: WbGpioModule, m4?: WbGpioModule, m5?: WbGpioModule, m6?: WbGpioModule, m7?: WbGpioModule, m8?: WbGpioModule): WbGpioDevice<NonNullArray<[typeof m1, typeof m2, typeof m3, typeof m4, typeof m5, typeof m6, typeof m7, typeof m8]>> {
     const modules: WbGpioModule[] = [m1]
     if (m2) modules.push(m2)
     if (m3) modules.push(m3)
@@ -73,9 +73,7 @@ export class WirenboardDeviceFactoryImpl implements WirenboardDeviceFactory {
     if (m6) modules.push(m6)
     if (m7) modules.push(m7)
     if (m8) modules.push(m8)
-    const config = wbGpioConfig(modules as [WbGpioModule, WbGpioModule, WbGpioModule, WbGpioModule, WbGpioModule, WbGpioModule, WbGpioModule, WbGpioModule])
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
+    const config = wbGpioConfig(modules)
     return this._modbusDeviceFactory.createPhysicalWbDevice(config, suffix => `/${DEVICES_TOPIC_IDENTIFIER}/${WB_GPIO_TOPIC_IDENTIFIER}` + (suffix ? `/${CONTROLS_TOPIC_IDENTIFIER}/${suffix}` : ''))
   }
 }

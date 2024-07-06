@@ -10,6 +10,9 @@ export type IntegerRange<F extends number, T extends number> = Exclude<IntegerEn
 
 export type Union<Types extends readonly unknown[], Acc = object> = Types extends [infer Head, ...infer Tail] ? Union<Tail, Acc & Head> : Acc
 
+type JoinNonNullToArray<Element, Arr extends readonly unknown[]> = Element extends undefined ? Arr : Element extends null ? Arr : [...Arr, Element]
+export type NonNullArray<Arr extends readonly unknown[], Acc extends unknown[] = []> = Arr extends [infer Head, ...infer Tail] ? NonNullArray<Tail, JoinNonNullToArray<Head, Acc>> : Acc
+
 export function isDefine<T>(t: Optional<T>): t is T {
   return t !== null && t !== undefined
 }
